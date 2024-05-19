@@ -1,0 +1,1 @@
+export const DEFAULT_CATEGORIES = ['Youtube Links', 'Instagram Links', 'TikTok Links', 'Reddit Links', 'Google Map Links']
