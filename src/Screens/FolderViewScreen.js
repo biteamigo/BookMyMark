@@ -267,7 +267,7 @@ const FolderViewScreen = ({ navigation, route }) => {
       <BottomActionBar
         currentFolderId={currentFolderId}
         onSelect={() => console.log("Select pressed")}
-        onNewBookmark={() => console.log("New Bookmark pressed")}
+        onNewBookmark={() => navigation.navigate('NewBookmark', { currentFolderId })}
       />
     </KeyboardAvoidingView>
   );

@@ -6,6 +6,8 @@ import { useFonts, NovaRound_400Regular } from '@expo-google-fonts/nova-round';
 import * as SplashScreen from 'expo-splash-screen';
 import FolderViewScreen from "./src/Screens/FolderViewScreen.js";
 import NewFolderScreen from "./src/Screens/NewFolderScreen.js";
+import NewBookmarkScreen from "./src/Screens/NewBookmarkScreen.js";
+import FolderPickerScreen from "./src/Screens/FolderPickerScreen.js";
 import DebugScreen from "./src/Screens/DebugScreen.js";
 import EllipsisMenuButton from "./src/Components/EllipsisMenuButton.js";
 import DebugButton from "./src/Components/DebugButton.js";
@@ -50,13 +52,18 @@ const HeaderRight = ({ route }) => {
   const { addFolder } = useFolders();
   const navigation = useNavigation();
   
-  // Get view mode from route params (set by FolderViewScreen)
+  // Get view mode and current folder from route params
   const viewMode = route?.params?.viewMode || 'grid';
+  const currentFolderId = route?.params?.folderId || null;
   
   // Handler to change view mode via navigation params (serializable)
   const handleViewModeChange = React.useCallback((newMode) => {
     navigation.setParams({ viewMode: newMode });
   }, [navigation]);
+  
+  const handleNewBookmark = () => {
+    navigation.navigate('NewBookmark', { currentFolderId });
+  };
   
   return (
     <View style={styles.headerRightContainer}>
@@ -64,7 +71,7 @@ const HeaderRight = ({ route }) => {
       <EllipsisMenuButton
         onSelect={() => console.log("Select pressed")}
         onNewFolder={addFolder}
-        onNewBookmark={() => console.log("New Bookmark pressed")}
+        onNewBookmark={handleNewBookmark}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
       />
@@ -89,6 +96,22 @@ const AppNavigator = () => {
         initialParams={{ folderId: null }}
       />
       <Stack.Screen name="NewFolder" component={NewFolderScreen} />
+      <Stack.Screen 
+        name="NewBookmark" 
+        component={NewBookmarkScreen}
+        options={{
+          headerShown: false,
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen 
+        name="FolderPicker" 
+        component={FolderPickerScreen}
+        options={{
+          headerShown: false,
+          presentation: 'modal',
+        }}
+      />
       <Stack.Screen 
         name="Debug" 
         component={DebugScreen}
