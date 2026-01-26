@@ -168,15 +168,34 @@ export class FolderRepository {
   }
 
   /**
-   * Search folders by name
+   * Search folders by name using FTS5
    * @param {string} query
    * @returns {Folder[]}
    */
   search(query) {
-    return this.db.getAllSync(
-      "SELECT * FROM folders WHERE name LIKE ? ORDER BY name ASC",
-      [`%${query}%`]
-    );
+    if (!query || query.trim() === '') {
+      return [];
+    }
+
+    // Escape FTS5 special characters and add prefix wildcard for substring matching
+    const ftsQuery = query.trim().replace(/[:"*]/g, ' ') + '*';
+    
+    try {
+      return this.db.getAllSync(
+        `SELECT f.* FROM folders f
+         INNER JOIN folders_fts fts ON f.id = fts.id
+         WHERE folders_fts MATCH ?
+         ORDER BY rank, f.name ASC`,
+        [ftsQuery]
+      );
+    } catch (error) {
+      // Fallback to LIKE if FTS query fails
+      console.warn('FTS search failed, falling back to LIKE:', error.message);
+      return this.db.getAllSync(
+        "SELECT * FROM folders WHERE name LIKE ? ORDER BY name ASC",
+        [`%${query}%`]
+      );
+    }
   }
 }
 

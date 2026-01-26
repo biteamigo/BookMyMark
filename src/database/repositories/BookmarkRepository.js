@@ -198,17 +198,36 @@ export class BookmarkRepository {
   }
 
   /**
-   * Search bookmarks by name or URL
+   * Search bookmarks by name or URL using FTS5
    * @param {string} query
    * @returns {Bookmark[]}
    */
   search(query) {
-    return this.db.getAllSync(
-      `SELECT * FROM bookmarks 
-       WHERE name LIKE ? OR url LIKE ? 
-       ORDER BY createdAt DESC`,
-      [`%${query}%`, `%${query}%`]
-    );
+    if (!query || query.trim() === '') {
+      return [];
+    }
+
+    // Escape FTS5 special characters and add prefix wildcard for substring matching
+    const ftsQuery = query.trim().replace(/[:"*]/g, ' ') + '*';
+    
+    try {
+      return this.db.getAllSync(
+        `SELECT b.* FROM bookmarks b
+         INNER JOIN bookmarks_fts fts ON b.id = fts.id
+         WHERE bookmarks_fts MATCH ?
+         ORDER BY rank, b.createdAt DESC`,
+        [ftsQuery]
+      );
+    } catch (error) {
+      // Fallback to LIKE if FTS query fails (e.g., invalid syntax)
+      console.warn('FTS search failed, falling back to LIKE:', error.message);
+      return this.db.getAllSync(
+        `SELECT * FROM bookmarks 
+         WHERE name LIKE ? OR url LIKE ? 
+         ORDER BY createdAt DESC`,
+        [`%${query}%`, `%${query}%`]
+      );
+    }
   }
 
   /**
@@ -217,6 +236,10 @@ export class BookmarkRepository {
    * @returns {Bookmark[]}
    */
   searchByTag(tagName) {
+    if (!tagName || tagName.trim() === '') {
+      return [];
+    }
+
     return this.db.getAllSync(
       `SELECT DISTINCT b.* FROM bookmarks b
        INNER JOIN bookmark_tags bt ON b.id = bt.bookmarkId
@@ -228,19 +251,61 @@ export class BookmarkRepository {
   }
 
   /**
-   * Combined search (name, URL, or tags)
+   * Combined search (name, URL, or tags) using FTS5
    * @param {string} query
    * @returns {Bookmark[]}
    */
   searchAll(query) {
-    return this.db.getAllSync(
-      `SELECT DISTINCT b.* FROM bookmarks b
-       LEFT JOIN bookmark_tags bt ON b.id = bt.bookmarkId
-       LEFT JOIN tags t ON bt.tagId = t.id
-       WHERE b.name LIKE ? OR b.url LIKE ? OR t.name LIKE ?
-       ORDER BY b.createdAt DESC`,
-      [`%${query}%`, `%${query}%`, `%${query}%`]
-    );
+    if (!query || query.trim() === '') {
+      return [];
+    }
+
+    const ftsQuery = query.trim().replace(/[:"*]/g, ' ') + '*';
+    
+    try {
+      // Search bookmarks using FTS5
+      const bookmarkResults = this.db.getAllSync(
+        `SELECT b.* FROM bookmarks b
+         INNER JOIN bookmarks_fts fts ON b.id = fts.id
+         WHERE bookmarks_fts MATCH ?
+         ORDER BY rank, b.createdAt DESC`,
+        [ftsQuery]
+      );
+
+      // Also search by tags (tags are typically small, LIKE is fine)
+      const tagResults = this.db.getAllSync(
+        `SELECT DISTINCT b.* FROM bookmarks b
+         INNER JOIN bookmark_tags bt ON b.id = bt.bookmarkId
+         INNER JOIN tags t ON bt.tagId = t.id
+         WHERE t.name LIKE ?
+         ORDER BY b.createdAt DESC`,
+        [`%${query}%`]
+      );
+
+      // Merge and deduplicate results by id
+      const seen = new Set();
+      const combined = [];
+      
+      for (const bookmark of [...bookmarkResults, ...tagResults]) {
+        if (!seen.has(bookmark.id)) {
+          seen.add(bookmark.id);
+          combined.push(bookmark);
+        }
+      }
+      
+      return combined;
+    } catch (error) {
+      // Fallback to LIKE if FTS query fails
+      console.warn('FTS searchAll failed, falling back to LIKE:', error.message);
+      return this.db.getAllSync(
+        `SELECT DISTINCT b.* FROM bookmarks b
+         LEFT JOIN bookmark_tags bt ON b.id = bt.bookmarkId
+         LEFT JOIN tags t ON bt.tagId = t.id
+         WHERE b.name LIKE ? OR b.url LIKE ? OR t.name LIKE ?
+         ORDER BY b.createdAt DESC`,
+        [`%${query}%`, `%${query}%`, `%${query}%`]
+      );
+    }
   }
 
   /**

@@ -17,6 +17,7 @@ jest.mock("@react-navigation/native", () => {
       navigate: jest.fn(),
       goBack: jest.fn(),
       setParams: jest.fn(),
+      setOptions: jest.fn(),
     }),
     useRoute: () => ({
       params: {},
@@ -132,6 +133,18 @@ beforeEach(() => {
 
 jest.mock("expo-sqlite", () => ({
   openDatabaseSync: jest.fn(() => createMockDatabase()),
+}));
+
+// Mock expo-splash-screen
+jest.mock("expo-splash-screen", () => ({
+  preventAutoHideAsync: jest.fn(),
+  hideAsync: jest.fn(),
+}));
+
+// Mock expo-google-fonts
+jest.mock("@expo-google-fonts/nova-round", () => ({
+  useFonts: jest.fn(() => [true, null]),
+  NovaRound_400Regular: "NovaRound_400Regular",
 }));
 
 // Silence console warnings during tests

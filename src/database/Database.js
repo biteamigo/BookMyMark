@@ -33,6 +33,13 @@ const initializeDatabase = (db) => {
   // Seed initial data if needed
   seedDatabase(db);
   
+  // Rebuild FTS indexes only if there's data (triggers will handle new inserts)
+  // This avoids errors on fresh databases
+  const folderCount = db.getFirstSync("SELECT COUNT(*) as count FROM folders");
+  if (folderCount && folderCount.count > 0) {
+    rebuildFTSIndexes(db);
+  }
+  
   console.log("Database initialized successfully");
 };
 
@@ -42,8 +49,32 @@ const initializeDatabase = (db) => {
  * @param {SQLite.SQLiteDatabase} db
  */
 export const resetDatabase = (db) => {
-  // Drop all tables
-  db.execSync(DROP_TABLES_SQL);
+  try {
+    // Drop FTS virtual tables first (individually to handle errors gracefully)
+    try {
+      db.execSync("DROP TABLE IF EXISTS bookmarks_fts;");
+    } catch (e) {
+      // Ignore if table doesn't exist
+    }
+    
+    try {
+      db.execSync("DROP TABLE IF EXISTS folders_fts;");
+    } catch (e) {
+      // Ignore if table doesn't exist
+    }
+    
+    // Drop regular tables
+    db.execSync(`
+      DROP TABLE IF EXISTS bookmark_tags;
+      DROP TABLE IF EXISTS folder_bookmarks;
+      DROP TABLE IF EXISTS tags;
+      DROP TABLE IF EXISTS bookmarks;
+      DROP TABLE IF EXISTS folders;
+    `);
+  } catch (error) {
+    console.warn("Error dropping tables:", error);
+    // Continue anyway - tables might not exist
+  }
   
   // Recreate tables
   db.execSync(CREATE_TABLES_SQL);
@@ -52,6 +83,58 @@ export const resetDatabase = (db) => {
   seedDatabase(db);
   
   console.log("Database reset successfully");
+};
+
+/**
+ * Check if FTS tables exist
+ * @param {SQLite.SQLiteDatabase} db
+ * @returns {boolean}
+ */
+const ftsTablesExist = (db) => {
+  try {
+    const result = db.getFirstSync(
+      "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name IN ('folders_fts', 'bookmarks_fts')"
+    );
+    return result.count === 2;
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
+ * Rebuild FTS indexes from existing data
+ * This syncs the FTS virtual tables with the actual data tables
+ * @param {SQLite.SQLiteDatabase} db
+ */
+export const rebuildFTSIndexes = (db) => {
+  try {
+    // Check if FTS tables exist first
+    if (!ftsTablesExist(db)) {
+      console.log("FTS tables not found, skipping rebuild");
+      return;
+    }
+
+    // Clear existing FTS data
+    db.execSync("DELETE FROM folders_fts;");
+    db.execSync("DELETE FROM bookmarks_fts;");
+    
+    // Rebuild folders FTS index
+    db.execSync(`
+      INSERT INTO folders_fts(rowid, id, name)
+      SELECT rowid, id, name FROM folders;
+    `);
+    
+    // Rebuild bookmarks FTS index
+    db.execSync(`
+      INSERT INTO bookmarks_fts(rowid, id, name, url)
+      SELECT rowid, id, name, url FROM bookmarks;
+    `);
+    
+    console.log("FTS indexes rebuilt successfully");
+  } catch (error) {
+    console.error("Error rebuilding FTS indexes:", error);
+    // Non-fatal - continue anyway
+  }
 };
 
 /**
@@ -66,6 +149,8 @@ export const clearAllData = (db) => {
     DELETE FROM bookmarks;
     DELETE FROM folders;
   `);
+  
+  // FTS tables are automatically cleared by triggers
   
   console.log("All data cleared");
 };
@@ -111,6 +196,7 @@ export default {
   getDatabase,
   resetDatabase,
   clearAllData,
+  rebuildFTSIndexes,
   getTableStats,
   exportToJSON,
 };

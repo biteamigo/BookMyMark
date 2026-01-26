@@ -31,12 +31,27 @@ const FolderViewScreen = ({ navigation, route }) => {
   const [originalName, setOriginalName] = useState("");
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const [items, setItems] = useState([]);
+  const [currentFolderName, setCurrentFolderName] = useState("");
   
   // View mode: 'grid' or 'list' - default based on folder level
   const [viewMode, setViewMode] = useState(isRoot ? 'grid' : 'list');
   
   const inputRef = useRef(null);
   const flatListRef = useRef(null);
+
+  // Load current folder name and update header
+  useEffect(() => {
+    if (!isRoot && currentFolderId) {
+      const folder = folderRepository.getById(currentFolderId);
+      if (folder) {
+        setCurrentFolderName(folder.name);
+        navigation.setParams({ folderName: folder.name });
+      }
+    } else {
+      setCurrentFolderName("");
+      navigation.setParams({ folderName: null });
+    }
+  }, [currentFolderId, isRoot, folderRepository, navigation]);
 
   // Load folders and bookmarks for current level
   const loadItems = () => {
@@ -101,6 +116,13 @@ const FolderViewScreen = ({ navigation, route }) => {
     if (editingFolderId) {
       updateFolderName(editingFolderId, editingName.trim() || originalName);
       loadItems(); // Reload to show updated name
+      
+      // If we're editing the current folder (shown in header), update the header
+      if (editingFolderId === currentFolderId) {
+        const updatedName = editingName.trim() || originalName;
+        setCurrentFolderName(updatedName);
+        navigation.setParams({ folderName: updatedName });
+      }
     }
   };
 
@@ -190,12 +212,20 @@ const FolderViewScreen = ({ navigation, route }) => {
   };
 
   // Expose view mode to navigation params for header access
+  // Also listen for view mode changes from header
   useEffect(() => {
     navigation.setParams({
       viewMode: viewMode,
-      onViewModeChange: setViewMode,
     });
   }, [viewMode, navigation]);
+
+  // Listen for route param changes to update view mode
+  useEffect(() => {
+    const newViewMode = route.params?.viewMode;
+    if (newViewMode && newViewMode !== viewMode) {
+      setViewMode(newViewMode);
+    }
+  }, [route.params?.viewMode]);
 
   return (
     <KeyboardAvoidingView

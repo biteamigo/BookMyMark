@@ -7,6 +7,10 @@
  * - tags: Stores tag names
  * - folder_bookmarks: Junction table for folders ↔ bookmarks (many-to-many)
  * - bookmark_tags: Junction table for bookmarks ↔ tags (many-to-many)
+ * 
+ * FTS5 Virtual Tables (for fast full-text search):
+ * - folders_fts: Full-text search index for folders
+ * - bookmarks_fts: Full-text search index for bookmarks
  */
 
 export const CREATE_TABLES_SQL = `
@@ -57,6 +61,49 @@ CREATE TABLE IF NOT EXISTS bookmark_tags (
   FOREIGN KEY (tagId) REFERENCES tags(id) ON DELETE CASCADE
 );
 
+-- FTS5 Virtual Table for Folders (Full-Text Search)
+CREATE VIRTUAL TABLE IF NOT EXISTS folders_fts USING fts5(
+  id UNINDEXED,
+  name,
+  content='folders',
+  content_rowid='rowid'
+);
+
+-- FTS5 Virtual Table for Bookmarks (Full-Text Search)
+CREATE VIRTUAL TABLE IF NOT EXISTS bookmarks_fts USING fts5(
+  id UNINDEXED,
+  name,
+  url,
+  content='bookmarks',
+  content_rowid='rowid'
+);
+
+-- Triggers to keep folders_fts synchronized
+CREATE TRIGGER IF NOT EXISTS folders_ai AFTER INSERT ON folders BEGIN
+  INSERT INTO folders_fts(rowid, id, name) VALUES (new.rowid, new.id, new.name);
+END;
+
+CREATE TRIGGER IF NOT EXISTS folders_au AFTER UPDATE ON folders BEGIN
+  UPDATE folders_fts SET name = new.name WHERE id = new.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS folders_ad AFTER DELETE ON folders BEGIN
+  DELETE FROM folders_fts WHERE id = old.id;
+END;
+
+-- Triggers to keep bookmarks_fts synchronized
+CREATE TRIGGER IF NOT EXISTS bookmarks_ai AFTER INSERT ON bookmarks BEGIN
+  INSERT INTO bookmarks_fts(rowid, id, name, url) VALUES (new.rowid, new.id, new.name, new.url);
+END;
+
+CREATE TRIGGER IF NOT EXISTS bookmarks_au AFTER UPDATE ON bookmarks BEGIN
+  UPDATE bookmarks_fts SET name = new.name, url = new.url WHERE id = new.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS bookmarks_ad AFTER DELETE ON bookmarks BEGIN
+  DELETE FROM bookmarks_fts WHERE id = old.id;
+END;
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_folders_parentId ON folders(parentId);
 CREATE INDEX IF NOT EXISTS idx_folders_name ON folders(name);
@@ -70,6 +117,8 @@ CREATE INDEX IF NOT EXISTS idx_bookmark_tags_tagId ON bookmark_tags(tagId);
 `;
 
 export const DROP_TABLES_SQL = `
+DROP TABLE IF EXISTS bookmarks_fts;
+DROP TABLE IF EXISTS folders_fts;
 DROP TABLE IF EXISTS bookmark_tags;
 DROP TABLE IF EXISTS folder_bookmarks;
 DROP TABLE IF EXISTS tags;
