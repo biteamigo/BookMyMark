@@ -9,9 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { usePreventRemove } from '@react-navigation/native';
 import TagsInput from '../Components/TagsInput';
 import { useDatabase } from '../Context/DatabaseContext';
 import globalStyles from '../CSS/GlobalCss';
@@ -79,8 +81,42 @@ const NewBookmarkScreen = ({ navigation, route }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
-    if (!validateForm()) {
+  const handleSave = React.useCallback(() => {
+    const newErrors = {};
+
+    // Validate name
+    if (!name.trim()) {
+      newErrors.name = 'Bookmark name is required';
+    } else if (name.length > 100) {
+      newErrors.name = 'Name must be less than 100 characters';
+    }
+
+    // Validate URL
+    if (!url.trim()) {
+      newErrors.url = 'URL is required';
+    } else {
+      // Auto-prefix with https:// if no protocol
+      let validUrl = url.trim();
+      if (!validUrl.match(/^https?:\/\//i)) {
+        validUrl = 'https://' + validUrl;
+      }
+      
+      // Basic URL validation
+      try {
+        new URL(validUrl);
+      } catch (e) {
+        newErrors.url = 'Please enter a valid URL';
+      }
+    }
+
+    // Validate at least one folder
+    if (selectedFolderIds.length === 0) {
+      newErrors.folders = 'Please select at least one folder';
+    }
+
+    setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
       return;
     }
 
@@ -109,7 +145,7 @@ const NewBookmarkScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Failed to save bookmark. Please try again.');
       console.error('Save bookmark error:', error);
     }
-  };
+  }, [name, url, selectedFolderIds, bookmarkRepository, tagRepository, navigation]);
 
   const saveBookmark = (finalUrl) => {
     // Create bookmark
@@ -130,20 +166,23 @@ const NewBookmarkScreen = ({ navigation, route }) => {
     navigation.goBack();
   };
 
-  const handleCancel = () => {
-    if (name || url || tags.length > 0) {
-      Alert.alert(
-        'Discard Changes?',
-        'You have unsaved changes. Are you sure you want to cancel?',
-        [
-          { text: 'Keep Editing', style: 'cancel' },
-          { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() }
-        ]
-      );
-    } else {
-      navigation.goBack();
-    }
-  };
+  // Prevent going back with unsaved changes
+  const hasUnsavedChanges = Boolean(name || url || tags.length > 0);
+  
+  usePreventRemove(hasUnsavedChanges, ({ data }) => {
+    Alert.alert(
+      'Discard Changes?',
+      'You have unsaved changes. Are you sure you want to go back?',
+      [
+        { text: 'Keep Editing', style: 'cancel', onPress: () => {} },
+        { 
+          text: 'Discard', 
+          style: 'destructive', 
+          onPress: () => navigation.dispatch(data.action)
+        }
+      ]
+    );
+  });
 
   const openFolderPicker = () => {
     navigation.navigate('FolderPicker', {
@@ -163,6 +202,45 @@ const NewBookmarkScreen = ({ navigation, route }) => {
       .join(', ');
   };
 
+  // Set up navigation header (memoize to avoid re-creating on every render)
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: () => (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image 
+            source={require('../../assets/icon.png')} 
+            style={{ width: 33, height: 25 }} 
+          />
+          <Text style={{ 
+            fontFamily: 'NovaRound_400Regular', 
+            fontSize: 17, 
+            color: '#000',
+            letterSpacing: 0.3,
+            marginLeft: 2,
+          }}>
+            New Bookmark
+          </Text>
+        </View>
+      ),
+      headerRight: () => (
+        <TouchableOpacity 
+          onPress={handleSave}
+          testID="save-button"
+          style={{ 
+            paddingVertical: 8,
+            paddingLeft: 16,
+            paddingRight: 8,
+            marginRight: 8,
+          }}
+        >
+          <Text style={{ fontSize: 17, fontWeight: '600', color: '#007AFF' }}>
+            Save
+          </Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, handleSave]);
+
   return (
     <SafeAreaView style={[globalStyles.pageView, styles.safeArea]}>
       <KeyboardAvoidingView
@@ -170,39 +248,26 @@ const NewBookmarkScreen = ({ navigation, route }) => {
         style={styles.container}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
+
         {/* Form */}
         <ScrollView 
           style={styles.formContainer}
           contentContainerStyle={styles.formContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* Header Card */}
-          <View style={styles.headerCard}>
-            <TouchableOpacity 
-              onPress={handleCancel}
-              style={styles.closeButton}
-              testID="cancel-button"
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="close-circle" size={32} color="#8E8E93" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>New Bookmark</Text>
-            <TouchableOpacity 
-              onPress={handleSave}
-              testID="save-button"
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={styles.saveText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Bookmark Name */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldCard}>
-              <View style={styles.fieldLabel}>
-                <Ionicons name="bookmark-outline" size={20} color="#007AFF" />
-                <Text style={styles.labelText}>Bookmark Name</Text>
-                <Text style={styles.requiredText}>*</Text>
+          {/* Main Info Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>BASIC INFO</Text>
+            
+            {/* Bookmark Name */}
+            <View style={styles.field}>
+              <View style={styles.fieldHeader}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="create-outline" size={18} color="#007AFF" />
+                  <Text style={styles.labelText}>Name</Text>
+                  <Text style={styles.requiredText}>*</Text>
+                </View>
               </View>
               <TextInput
                 style={[styles.input, errors.name && styles.inputError]}
@@ -211,22 +276,22 @@ const NewBookmarkScreen = ({ navigation, route }) => {
                   setName(text);
                   if (errors.name) setErrors({ ...errors, name: undefined });
                 }}
-                placeholder="Enter bookmark name..."
-                placeholderTextColor="#999"
+                placeholder="My favorite website..."
+                placeholderTextColor="#A0A0A0"
                 maxLength={100}
                 testID="name-input"
               />
               {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
             </View>
-          </View>
 
-          {/* URL */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldCard}>
-              <View style={styles.fieldLabel}>
-                <Ionicons name="link-outline" size={20} color="#007AFF" />
-                <Text style={styles.labelText}>URL</Text>
-                <Text style={styles.requiredText}>*</Text>
+            {/* URL */}
+            <View style={styles.field}>
+              <View style={styles.fieldHeader}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="globe-outline" size={18} color="#007AFF" />
+                  <Text style={styles.labelText}>Website URL</Text>
+                  <Text style={styles.requiredText}>*</Text>
+                </View>
               </View>
               <TextInput
                 style={[styles.input, errors.url && styles.inputError]}
@@ -236,7 +301,7 @@ const NewBookmarkScreen = ({ navigation, route }) => {
                   if (errors.url) setErrors({ ...errors, url: undefined });
                 }}
                 placeholder="https://example.com"
-                placeholderTextColor="#999"
+                placeholderTextColor="#A0A0A0"
                 keyboardType="url"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -246,13 +311,23 @@ const NewBookmarkScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          {/* Folders */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldCard}>
-              <View style={styles.fieldLabel}>
-                <Ionicons name="folder-open-outline" size={20} color="#007AFF" />
-                <Text style={styles.labelText}>Add to Folders</Text>
-                <Text style={styles.requiredText}>*</Text>
+          {/* Organization Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>ORGANIZATION</Text>
+            
+            {/* Folders */}
+            <View style={styles.field}>
+              <View style={styles.fieldHeader}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="folder-outline" size={18} color="#007AFF" />
+                  <Text style={styles.labelText}>Folders</Text>
+                  <Text style={styles.requiredText}>*</Text>
+                </View>
+                {selectedFolderIds.length > 0 && (
+                  <View style={styles.countBadge}>
+                    <Text style={styles.countBadgeText}>{selectedFolderIds.length}</Text>
+                  </View>
+                )}
               </View>
               <TouchableOpacity
                 style={[styles.pickerButton, errors.folders && styles.inputError]}
@@ -262,44 +337,40 @@ const NewBookmarkScreen = ({ navigation, route }) => {
                 <Text style={selectedFolderIds.length > 0 ? styles.pickerTextSelected : styles.pickerTextPlaceholder}>
                   {selectedFolderIds.length > 0 
                     ? getSelectedFolderNames()
-                    : 'Select folders...'
+                    : 'Tap to select folders...'
                   }
                 </Text>
-                <View style={styles.pickerRight}>
-                  {selectedFolderIds.length > 0 && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{selectedFolderIds.length}</Text>
-                    </View>
-                  )}
-                  <Ionicons name="chevron-forward" size={20} color="#007AFF" />
-                </View>
+                <Ionicons name="chevron-forward" size={20} color="#007AFF" />
               </TouchableOpacity>
               {errors.folders && <Text style={styles.errorText}>{errors.folders}</Text>}
               <Text style={styles.helpText}>
-                You can add this bookmark to multiple folders
+                💡 Add to multiple folders for easy access
               </Text>
             </View>
-          </View>
 
-          {/* Tags */}
-          <View style={styles.fieldContainer}>
-            <View style={styles.fieldCard}>
-              <View style={styles.fieldLabel}>
-                <Ionicons name="pricetag-outline" size={20} color="#007AFF" />
-                <Text style={styles.labelText}>Tags</Text>
-                <Text style={styles.optionalText}>(optional)</Text>
+            {/* Tags */}
+            <View style={styles.field}>
+              <View style={styles.fieldHeader}>
+                <View style={styles.fieldLabelRow}>
+                  <Ionicons name="pricetags-outline" size={18} color="#007AFF" />
+                  <Text style={styles.labelText}>Tags</Text>
+                  <Text style={styles.optionalBadge}>Optional</Text>
+                </View>
               </View>
               <TagsInput
                 tags={tags}
                 onChange={setTags}
                 suggestions={allTags}
-                placeholder="Add tag..."
+                placeholder="Add tags..."
               />
               <Text style={styles.helpText}>
-                Tags help you find bookmarks faster
+                🔍 Use tags to find bookmarks faster
               </Text>
             </View>
           </View>
+
+          {/* Bottom Spacing */}
+          <View style={styles.bottomSpacing} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -308,162 +379,143 @@ const NewBookmarkScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#F8F9FA',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
+    marginTop: 0,
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
-  headerCard: {
+  // Form Styles
+  formContainer: {
+    flex: 1,
+  },
+  formContent: {
+    paddingTop: 0,
+    paddingBottom: 32,
+  },
+  section: {
+    marginBottom: 32,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#8E8E93',
+    letterSpacing: 0.5,
+    marginBottom: 16,
+    marginLeft: 4,
+  },
+  field: {
+    marginBottom: 24,
+  },
+  fieldHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginBottom: 24,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 0,
+    marginBottom: 10,
   },
-  closeButton: {
-    marginRight: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000',
-    letterSpacing: 0.3,
-    textAlign: 'center',
-  },
-  saveText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  formContainer: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  formContent: {
-    padding: 20,
-  },
-  fieldContainer: {
-    marginBottom: 20,
-  },
-  fieldCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 18,
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 122, 255, 0.08)',
-  },
-  fieldLabel: {
+  fieldLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 7,
   },
   labelText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
+    color: '#1C1C1E',
   },
   requiredText: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#FF3B30',
-    marginLeft: 4,
+    fontWeight: '600',
   },
-  optionalText: {
+  optionalBadge: {
+    fontSize: 12,
+    color: '#8E8E93',
+    backgroundColor: 'rgba(142, 142, 147, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    overflow: 'hidden',
+    fontWeight: '500',
+  },
+  countBadge: {
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    minWidth: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countBadgeText: {
+    color: '#FFFFFF',
     fontSize: 13,
-    color: '#999',
-    marginLeft: 4,
-    fontStyle: 'italic',
+    fontWeight: '700',
   },
+  // Input Styles
   input: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+    paddingVertical: 16,
+    fontSize: 17,
     color: '#000',
-    borderWidth: 1.5,
-    borderColor: '#E0E5ED',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   inputError: {
     borderColor: '#FF3B30',
+    borderWidth: 1.5,
     backgroundColor: '#FFF5F5',
   },
   pickerButton: {
-    backgroundColor: '#F8FAFF',
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 122, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   pickerTextPlaceholder: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: 17,
+    color: '#A0A0A0',
     flex: 1,
   },
   pickerTextSelected: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#000',
     flex: 1,
     fontWeight: '500',
   },
-  pickerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  badge: {
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    marginRight: 8,
-    minWidth: 32,
-    alignItems: 'center',
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  badgeText: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
   errorText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#FF3B30',
     marginTop: 8,
     marginLeft: 4,
     fontWeight: '500',
   },
   helpText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#8E8E93',
     marginTop: 8,
     marginLeft: 4,
+    lineHeight: 18,
+  },
+  bottomSpacing: {
+    height: 40,
   },
 });
 

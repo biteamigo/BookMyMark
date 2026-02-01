@@ -133,8 +133,8 @@ const AppNavigator = () => {
         name="NewBookmark" 
         component={NewBookmarkScreen}
         options={{
-          headerShown: false,
           presentation: 'card',
+          headerBackButtonMenuEnabled: false,
         }}
       />
       <Stack.Screen 
