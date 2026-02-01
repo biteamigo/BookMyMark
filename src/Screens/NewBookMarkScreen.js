@@ -8,9 +8,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import TagsInput from '../Components/TagsInput';
 import { useDatabase } from '../Context/DatabaseContext';
@@ -148,7 +148,7 @@ const NewBookmarkScreen = ({ navigation, route }) => {
   const openFolderPicker = () => {
     navigation.navigate('FolderPicker', {
       selectedFolderIds: selectedFolderIds,
-      onSelect: (ids) => {
+      _onSelect: (ids) => {
         setSelectedFolderIds(ids);
         setErrors({ ...errors, folders: undefined });
       },

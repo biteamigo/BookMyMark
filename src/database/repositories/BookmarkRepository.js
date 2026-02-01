@@ -142,7 +142,7 @@ export class BookmarkRepository {
   }
 
   /**
-   * Delete a bookmark
+   * Delete a bookmark (permanently)
    * @param {string} id
    * @returns {boolean}
    */
@@ -152,6 +152,30 @@ export class BookmarkRepository {
       [id]
     );
     return result.changes > 0;
+  }
+
+  /**
+   * Remove bookmark from a specific folder (context-aware delete)
+   * If bookmark exists in other folders, only remove from this folder
+   * If bookmark only exists in this folder, delete permanently
+   * @param {string} bookmarkId
+   * @param {string} folderId
+   * @returns {{removedFromFolder: boolean, deletedPermanently: boolean}}
+   */
+  deleteFromFolder(bookmarkId, folderId) {
+    // Check how many folders this bookmark belongs to
+    const folders = this.getFolders(bookmarkId);
+    
+    // Remove from this folder
+    this.removeFromFolder(bookmarkId, folderId);
+    
+    // If it was the last folder, delete the bookmark permanently
+    if (folders.length === 1 && folders[0] === folderId) {
+      this.delete(bookmarkId);
+      return { removedFromFolder: true, deletedPermanently: true };
+    }
+    
+    return { removedFromFolder: true, deletedPermanently: false };
   }
 
   /**

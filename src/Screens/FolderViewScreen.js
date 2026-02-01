@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -9,7 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import SearchBar from "../Components/SearchBar";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { PAGE_MARGIN } from "../Utils/Constants";
@@ -17,6 +19,9 @@ import globalStyles from "../CSS/GlobalCss";
 import { useFolders } from "../Context/FolderContext";
 import { useDatabase } from "../Context/DatabaseContext";
 import BottomActionBar from "../Components/BottomActionBar";
+import { getIconForUrl } from "../Utils/IconMapper";
+import Toast from "../Components/Toast";
+import { executeTransaction } from "../database/Database";
 
 const FolderViewScreen = ({ navigation, route }) => {
   // Get folderId from route params (null = root level)
@@ -35,6 +40,14 @@ const FolderViewScreen = ({ navigation, route }) => {
   
   // View mode: 'grid' or 'list' - default based on folder level
   const [viewMode, setViewMode] = useState(isRoot ? 'grid' : 'list');
+  
+  // Selection mode state
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState(new Set());
+  
+  // Toast notification state
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   
   const inputRef = useRef(null);
   const flatListRef = useRef(null);
@@ -75,6 +88,13 @@ const FolderViewScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadItems();
   }, [currentFolderId, editingFolderId]);
+
+  // Reload items when screen comes into focus (e.g., after creating a bookmark)
+  useFocusEffect(
+    useCallback(() => {
+      loadItems();
+    }, [currentFolderId])
+  );
 
   // When a folder starts being edited, set up the editing state
   useEffect(() => {
@@ -127,6 +147,13 @@ const FolderViewScreen = ({ navigation, route }) => {
   };
 
   const handleItemPress = (item) => {
+    // If in selection mode, toggle item selection
+    if (isSelectionMode) {
+      toggleItemSelection(item);
+      return;
+    }
+
+    // Normal behavior when not in selection mode
     if (item.type === 'folder') {
       // Navigate to subfolder (same screen, different folderId)
       navigation.push('FolderView', { folderId: item.id });
@@ -140,18 +167,151 @@ const FolderViewScreen = ({ navigation, route }) => {
     }
   };
 
+  const toggleSelectionMode = () => {
+    if (isSelectionMode) {
+      // Exiting selection mode - clear all selections
+      setSelectedItems(new Set());
+      setIsSelectionMode(false);
+    } else {
+      // Entering selection mode
+      setIsSelectionMode(true);
+    }
+  };
+
+  const toggleItemSelection = (item) => {
+    const itemKey = `${item.type}-${item.id}`;
+    const newSelected = new Set(selectedItems);
+    
+    if (newSelected.has(itemKey)) {
+      newSelected.delete(itemKey);
+    } else {
+      newSelected.add(itemKey);
+    }
+    
+    setSelectedItems(newSelected);
+  };
+
+  const showToast = (message) => {
+    setToastMessage(message);
+    setToastVisible(true);
+  };
+
+  const handleDelete = () => {
+    if (selectedItems.size === 0) return;
+
+    // Parse selected items
+    const folders = [];
+    const bookmarks = [];
+    
+    selectedItems.forEach((itemKey) => {
+      const [type, id] = itemKey.split('-');
+      if (type === 'folder') {
+        folders.push(id);
+      } else if (type === 'bookmark') {
+        bookmarks.push(id);
+      }
+    });
+
+    // Build confirmation message
+    const folderCount = folders.length;
+    const bookmarkCount = bookmarks.length;
+    
+    let message = 'Delete ';
+    const parts = [];
+    if (folderCount > 0) {
+      parts.push(`${folderCount} folder${folderCount > 1 ? 's' : ''}`);
+    }
+    if (bookmarkCount > 0) {
+      parts.push(`${bookmarkCount} bookmark${bookmarkCount > 1 ? 's' : ''}`);
+    }
+    message += parts.join(' and ') + '?';
+    
+    // Add folder cascade warning if any folder is selected
+    if (folderCount > 0) {
+      message += '\n\nThis will also delete any content in the selected folder(s).';
+    }
+
+    Alert.alert(
+      'Confirm Delete',
+      message,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => performDelete(folders, bookmarks),
+        },
+      ]
+    );
+  };
+
+  const performDelete = (folderIds, bookmarkIds) => {
+    try {
+      executeTransaction(folderRepository.db, () => {
+        let totalDeleted = 0;
+        
+        // Delete folders with cascade
+        folderIds.forEach((folderId) => {
+          const result = folderRepository.cascadeDelete(folderId);
+          totalDeleted += result.deletedFolders + result.deletedBookmarks;
+        });
+        
+        // Delete bookmarks (context-aware)
+        bookmarkIds.forEach((bookmarkId) => {
+          const result = bookmarkRepository.deleteFromFolder(bookmarkId, currentFolderId);
+          if (result.deletedPermanently || result.removedFromFolder) {
+            totalDeleted++;
+          }
+        });
+        
+        // Show toast with count
+        const itemText = totalDeleted === 1 ? 'item' : 'items';
+        showToast(`${totalDeleted} ${itemText} deleted`);
+        
+        // Exit selection mode
+        setIsSelectionMode(false);
+        setSelectedItems(new Set());
+        
+        // Navigate away if current folder was deleted
+        if (folderIds.includes(currentFolderId)) {
+          navigation.goBack();
+        } else {
+          // Reload items
+          loadItems();
+        }
+      });
+    } catch (error) {
+      console.error('Delete failed:', error);
+      Alert.alert('Error', 'Failed to delete items. Please try again.');
+    }
+  };
+
   const renderItem = ({ item }) => {
     const isEditing = item.type === 'folder' && item.id === editingFolderId;
     const isGridView = viewMode === 'grid';
+    const itemKey = `${item.type}-${item.id}`;
+    const isSelected = selectedItems.has(itemKey);
     
     if (item.type === 'folder') {
       return (
         <View style={isGridView ? styles.folderStyleGrid : styles.folderStyleList}>
           <TouchableOpacity
-            style={isGridView ? styles.folderTouchableGrid : styles.folderTouchableList}
+            style={[
+              isGridView ? styles.folderTouchableGrid : styles.folderTouchableList,
+              isSelected && styles.selectedItem
+            ]}
             onPress={() => !isEditing && handleItemPress(item)}
             disabled={isEditing}
           >
+            {isSelectionMode && (
+              <View style={styles.selectionIndicator}>
+                <Ionicons
+                  name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                  size={28}
+                  color={isSelected ? "#007AFF" : "#8E8E93"}
+                />
+              </View>
+            )}
             <MaterialCommunityIcons
               name="folder"
               size={isGridView ? 90 : 40}
@@ -185,39 +345,86 @@ const FolderViewScreen = ({ navigation, route }) => {
       );
     } else {
       // Bookmark item
-      return (
-        <View style={styles.bookmarkContainer}>
-          <TouchableOpacity
-            style={styles.bookmarkTouchable}
-            onPress={() => handleItemPress(item)}
-          >
-            <Ionicons
-              name="bookmark"
-              size={24}
-              color="#FF9500"
-              style={styles.bookmarkIcon}
-            />
-            <View style={styles.bookmarkTextContainer}>
-              <Text style={styles.bookmarkName} numberOfLines={1}>
+      const bookmarkIcon = getIconForUrl(item.url);
+      const IconComponent = bookmarkIcon.library === 'Ionicons' ? Ionicons : MaterialCommunityIcons;
+      
+      if (isGridView) {
+        return (
+          <View style={styles.bookmarkStyleGrid}>
+            <TouchableOpacity
+              style={[styles.bookmarkTouchableGrid, isSelected && styles.selectedItem]}
+              onPress={() => handleItemPress(item)}
+            >
+              {isSelectionMode && (
+                <View style={styles.selectionIndicator}>
+                  <Ionicons
+                    name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                    size={28}
+                    color={isSelected ? "#007AFF" : "#8E8E93"}
+                  />
+                </View>
+              )}
+              <View style={styles.bookmarkIconGridWrapper}>
+                <IconComponent
+                  name={bookmarkIcon.name}
+                  size={70}
+                  color={bookmarkIcon.color}
+                />
+              </View>
+              <Text
+                style={styles.bookmarkTextGrid}
+                numberOfLines={2}
+                ellipsizeMode="middle"
+              >
                 {item.name}
               </Text>
-              <Text style={styles.bookmarkUrl} numberOfLines={1}>
-                {item.url}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      );
+            </TouchableOpacity>
+          </View>
+        );
+      } else {
+        return (
+          <View style={styles.bookmarkContainer}>
+            <TouchableOpacity
+              style={[styles.bookmarkTouchable, isSelected && styles.selectedItem]}
+              onPress={() => handleItemPress(item)}
+            >
+              {isSelectionMode && (
+                <View style={styles.selectionIndicator}>
+                  <Ionicons
+                    name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                    size={28}
+                    color={isSelected ? "#007AFF" : "#8E8E93"}
+                  />
+                </View>
+              )}
+              <IconComponent
+                name={bookmarkIcon.name}
+                size={32}
+                color={bookmarkIcon.color}
+                style={styles.bookmarkIcon}
+              />
+              <View style={styles.bookmarkTextContainer}>
+                <Text style={styles.bookmarkName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        );
+      }
     }
   };
 
-  // Expose view mode to navigation params for header access
-  // Also listen for view mode changes from header
+  // Expose view mode, selection toggle, and delete handler to navigation params for header access
   useEffect(() => {
     navigation.setParams({
       viewMode: viewMode,
+      _toggleSelectionMode: toggleSelectionMode,
+      _handleDelete: handleDelete,
+      isSelectionMode: isSelectionMode,
+      selectedCount: selectedItems.size,
     });
-  }, [viewMode, navigation]);
+  }, [viewMode, navigation, isSelectionMode, selectedItems.size]);
 
   // Listen for route param changes to update view mode
   useEffect(() => {
@@ -266,8 +473,17 @@ const FolderViewScreen = ({ navigation, route }) => {
       
       <BottomActionBar
         currentFolderId={currentFolderId}
-        onSelect={() => console.log("Select pressed")}
+        onSelect={toggleSelectionMode}
         onNewBookmark={() => navigation.navigate('NewBookmark', { currentFolderId })}
+        onDelete={handleDelete}
+        isSelectionMode={isSelectionMode}
+        selectedCount={selectedItems.size}
+      />
+      
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
       />
     </KeyboardAvoidingView>
   );
@@ -287,6 +503,16 @@ const styles = StyleSheet.create({
   },
   columnWrapper: {
     justifyContent: "space-around",
+  },
+  selectedItem: {
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    borderRadius: 8,
+  },
+  selectionIndicator: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
   },
   
   // Grid layout (root level)
@@ -341,7 +567,32 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   
-  // Bookmark styles
+  // Bookmark styles - Grid view
+  bookmarkStyleGrid: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  bookmarkTouchableGrid: {
+    alignItems: "center",
+    width: '100%',
+  },
+  bookmarkIconGridWrapper: {
+    width: 90,
+    height: 90,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  bookmarkTextGrid: {
+    fontSize: 14,
+    textAlign: "center",
+    color: "#333",
+    paddingHorizontal: 4,
+    width: '100%',
+  },
+  
+  // Bookmark styles - List view
   bookmarkContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,

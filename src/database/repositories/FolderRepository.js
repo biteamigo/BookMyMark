@@ -197,6 +197,125 @@ export class FolderRepository {
       );
     }
   }
+
+  /**
+   * Get all descendant folder IDs (recursive)
+   * @param {string} folderId - Parent folder ID
+   * @returns {string[]} Array of folder IDs including the parent
+   */
+  getAllDescendantIds(folderId) {
+    const descendants = [folderId];
+    const queue = [folderId];
+    
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      const children = this.getSubfolders(currentId);
+      
+      for (const child of children) {
+        descendants.push(child.id);
+        queue.push(child.id);
+      }
+    }
+    
+    return descendants;
+  }
+
+  /**
+   * Count all items in a folder (bookmarks + subfolders, recursive)
+   * @param {string} folderId
+   * @returns {{bookmarkCount: number, folderCount: number, totalCount: number}}
+   */
+  countFolderContents(folderId) {
+    const folderIds = this.getAllDescendantIds(folderId);
+    
+    // Count subfolders (excluding the folder itself)
+    const folderCount = folderIds.length - 1;
+    
+    // Count bookmarks in all folders (including duplicates across folders)
+    let bookmarkCount = 0;
+    const countedBookmarks = new Set();
+    
+    for (const id of folderIds) {
+      const bookmarks = this.db.getAllSync(
+        `SELECT DISTINCT b.id 
+         FROM bookmarks b
+         JOIN folder_bookmarks fb ON b.id = fb.bookmarkId
+         WHERE fb.folderId = ?`,
+        [id]
+      );
+      
+      for (const bookmark of bookmarks) {
+        if (!countedBookmarks.has(bookmark.id)) {
+          countedBookmarks.add(bookmark.id);
+          bookmarkCount++;
+        }
+      }
+    }
+    
+    return {
+      bookmarkCount,
+      folderCount,
+      totalCount: bookmarkCount + folderCount
+    };
+  }
+
+  /**
+   * Delete a folder and all its contents (CASCADE)
+   * This deletes:
+   * - All subfolders recursively
+   * - All bookmarks that are ONLY in this folder tree
+   * - All junction table entries
+   * @param {string} folderId
+   * @returns {{deletedBookmarks: number, deletedFolders: number}}
+   */
+  cascadeDelete(folderId) {
+    // Get all folder IDs that will be deleted (including subfolders)
+    const folderIdsToDelete = this.getAllDescendantIds(folderId);
+    
+    // Get all bookmarks in these folders
+    const placeholders = folderIdsToDelete.map(() => '?').join(',');
+    const bookmarksInFolders = this.db.getAllSync(
+      `SELECT DISTINCT bookmarkId 
+       FROM folder_bookmarks 
+       WHERE folderId IN (${placeholders})`,
+      folderIdsToDelete
+    );
+    
+    let deletedBookmarks = 0;
+    
+    // For each bookmark, check if it exists in other folders
+    for (const { bookmarkId } of bookmarksInFolders) {
+      const otherFolders = this.db.getAllSync(
+        `SELECT folderId 
+         FROM folder_bookmarks 
+         WHERE bookmarkId = ? AND folderId NOT IN (${placeholders})`,
+        [bookmarkId, ...folderIdsToDelete]
+      );
+      
+      // If bookmark doesn't exist in any other folder, delete it permanently
+      if (otherFolders.length === 0) {
+        this.db.runSync("DELETE FROM bookmarks WHERE id = ?", [bookmarkId]);
+        deletedBookmarks++;
+      }
+    }
+    
+    // Delete all junction entries for these folders
+    this.db.runSync(
+      `DELETE FROM folder_bookmarks WHERE folderId IN (${placeholders})`,
+      folderIdsToDelete
+    );
+    
+    // Delete all folders (CASCADE will handle remaining references)
+    this.db.runSync(
+      `DELETE FROM folders WHERE id IN (${placeholders})`,
+      folderIdsToDelete
+    );
+    
+    return {
+      deletedBookmarks,
+      deletedFolders: folderIdsToDelete.length
+    };
+  }
 }
 
 export default FolderRepository;

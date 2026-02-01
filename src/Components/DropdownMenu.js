@@ -9,9 +9,29 @@ const DropdownMenu = ({
   onSelect, 
   onNewFolder, 
   onNewBookmark,
+  onDelete,
   viewMode,
-  onViewModeChange 
+  onViewModeChange,
+  isSelectionMode,
+  selectedCount 
 }) => {
+  const selectLabel = isSelectionMode 
+    ? `Selected (${selectedCount})` 
+    : "Select";
+  const selectIcon = isSelectionMode 
+    ? "checkmark-circle" 
+    : "checkmark-circle-outline";
+  const selectColor = isSelectionMode ? "#007AFF" : "#000";
+  
+  const isDeleteDisabled = selectedCount === 0;
+
+  const handleDelete = () => {
+    if (!isDeleteDisabled && onDelete) {
+      onDelete();
+      onClose();
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -24,31 +44,44 @@ const DropdownMenu = ({
           <TouchableWithoutFeedback>
             <View style={styles.menuContainer}>
               <MenuItem
-                icon={<Ionicons name="checkmark-circle-outline" size={24} color="#000" />}
-                label="Select"
+                icon={<Ionicons name={selectIcon} size={24} color={selectColor} />}
+                label={selectLabel}
                 onPress={() => {
                   onSelect?.();
                   onClose();
                 }}
               />
               <View style={styles.divider} />
-              <MenuItem
-                icon={<MaterialCommunityIcons name="folder-plus-outline" size={24} color="#000" />}
-                label="New Folder"
-                onPress={() => {
-                  onNewFolder?.();
-                  onClose();
-                }}
-              />
-              <View style={styles.divider} />
-              <MenuItem
-                icon={<MaterialCommunityIcons name="bookmark-plus-outline" size={24} color="#000" />}
-                label="New Bookmark"
-                onPress={() => {
-                  onNewBookmark?.();
-                  onClose();
-                }}
-              />
+              
+              {isSelectionMode ? (
+                <MenuItem
+                  icon={<Ionicons name="trash-outline" size={24} color={isDeleteDisabled ? "#C7C7CC" : "#FF3B30"} />}
+                  label="Delete"
+                  onPress={handleDelete}
+                  disabled={isDeleteDisabled}
+                  textColor={isDeleteDisabled ? "#C7C7CC" : "#FF3B30"}
+                />
+              ) : (
+                <>
+                  <MenuItem
+                    icon={<MaterialCommunityIcons name="folder-plus-outline" size={24} color="#000" />}
+                    label="New Folder"
+                    onPress={() => {
+                      onNewFolder?.();
+                      onClose();
+                    }}
+                  />
+                  <View style={styles.divider} />
+                  <MenuItem
+                    icon={<MaterialCommunityIcons name="bookmark-plus-outline" size={24} color="#000" />}
+                    label="New Bookmark"
+                    onPress={() => {
+                      onNewBookmark?.();
+                      onClose();
+                    }}
+                  />
+                </>
+              )}
               
               {/* Separator for view mode options */}
               <View style={styles.thickDivider} />

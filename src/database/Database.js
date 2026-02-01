@@ -44,6 +44,26 @@ const initializeDatabase = (db) => {
 };
 
 /**
+ * Execute multiple database operations in a transaction
+ * All operations succeed or all fail (atomicity)
+ * @param {SQLite.SQLiteDatabase} db
+ * @param {Function} operations - Function containing database operations
+ * @returns {*} Result of operations or throws error
+ */
+export const executeTransaction = (db, operations) => {
+  try {
+    db.execSync("BEGIN TRANSACTION;");
+    const result = operations();
+    db.execSync("COMMIT;");
+    return result;
+  } catch (error) {
+    db.execSync("ROLLBACK;");
+    console.error("Transaction failed, rolled back:", error);
+    throw error;
+  }
+};
+
+/**
  * Reset the database (drop all tables and recreate)
  * WARNING: This deletes all user data!
  * @param {SQLite.SQLiteDatabase} db

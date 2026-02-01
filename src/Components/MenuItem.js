@@ -2,9 +2,13 @@ import React from "react";
 import { TouchableOpacity, Text, StyleSheet, View, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-const MenuItem = ({ icon, label, onPress, imageSource, showCheckmark }) => {
+const MenuItem = ({ icon, label, onPress, imageSource, showCheckmark, disabled, textColor }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
+    <TouchableOpacity 
+      style={[styles.container, disabled && styles.disabled]} 
+      onPress={onPress}
+      disabled={disabled}
+    >
       <View style={styles.iconContainer}>
         {imageSource ? (
           <Image source={imageSource} style={styles.image} />
@@ -12,7 +16,7 @@ const MenuItem = ({ icon, label, onPress, imageSource, showCheckmark }) => {
           icon
         )}
       </View>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, textColor && { color: textColor }]}>{label}</Text>
       {showCheckmark && (
         <Ionicons name="checkmark" size={20} color="#007AFF" style={styles.checkmark} />
       )}
@@ -44,6 +48,9 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     marginLeft: 8,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });
 

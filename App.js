@@ -1,9 +1,18 @@
 import React from "react";
-import { View, StyleSheet, Image, Text, Platform } from "react-native";
+import { View, StyleSheet, Image, Text, Platform, LogBox } from "react-native";
 import { NavigationContainer, useNavigation, useRoute } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts, NovaRound_400Regular } from '@expo-google-fonts/nova-round';
 import * as SplashScreen from 'expo-splash-screen';
+
+// Suppress non-serializable callback warning for FolderPicker
+// This is intentional - we pass callbacks for better UX
+LogBox.ignoreLogs([
+  'Non-serializable values were found in the navigation state',
+  // We intentionally pass functions via params for callbacks (prefixed with _)
+  // This is a controlled pattern for better UX
+]);
 import FolderViewScreen from "./src/Screens/FolderViewScreen.js";
 import NewFolderScreen from "./src/Screens/NewFolderScreen.js";
 import NewBookmarkScreen from "./src/Screens/NewBookmarkScreen.js";
@@ -52,28 +61,52 @@ const HeaderRight = ({ route }) => {
   const { addFolder } = useFolders();
   const navigation = useNavigation();
   
-  // Get view mode and current folder from route params
+  // Get view mode, selection mode, and current folder from route params
   const viewMode = route?.params?.viewMode || 'grid';
   const currentFolderId = route?.params?.folderId || null;
+  const toggleSelectionMode = route?.params?._toggleSelectionMode;
+  const isSelectionMode = route?.params?.isSelectionMode || false;
+  const selectedCount = route?.params?.selectedCount || 0;
   
   // Handler to change view mode via navigation params (serializable)
   const handleViewModeChange = React.useCallback((newMode) => {
     navigation.setParams({ viewMode: newMode });
   }, [navigation]);
   
+  const handleSelect = React.useCallback(() => {
+    if (toggleSelectionMode) {
+      toggleSelectionMode();
+    }
+  }, [toggleSelectionMode]);
+  
   const handleNewBookmark = () => {
     navigation.navigate('NewBookmark', { currentFolderId });
   };
+  
+  const handleNewFolder = () => {
+    addFolder(currentFolderId);
+  };
+  
+  const deleteHandler = route?.params?._handleDelete;
+  
+  const handleDelete = React.useCallback(() => {
+    if (deleteHandler) {
+      deleteHandler();
+    }
+  }, [deleteHandler]);
   
   return (
     <View style={styles.headerRightContainer}>
       <DebugButton onPress={() => navigation.navigate("Debug")} />
       <EllipsisMenuButton
-        onSelect={() => console.log("Select pressed")}
-        onNewFolder={addFolder}
+        onSelect={handleSelect}
+        onNewFolder={handleNewFolder}
         onNewBookmark={handleNewBookmark}
+        onDelete={handleDelete}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
+        isSelectionMode={isSelectionMode}
+        selectedCount={selectedCount}
       />
     </View>
   );
@@ -140,13 +173,15 @@ const App = () => {
   }
 
   return (
-    <DatabaseProvider>
-      <FolderProvider>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
-      </FolderProvider>
-    </DatabaseProvider>
+    <SafeAreaProvider>
+      <DatabaseProvider>
+        <FolderProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </FolderProvider>
+      </DatabaseProvider>
+    </SafeAreaProvider>
   );
 };
 

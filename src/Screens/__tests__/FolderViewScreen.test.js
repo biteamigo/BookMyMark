@@ -199,9 +199,71 @@ describe("FolderViewScreen", () => {
     it("has working New Bookmark button", () => {
       renderWithProviders();
 
-      expect(() => {
-        fireEvent.press(screen.getByText("New Bookmark"));
-      }).not.toThrow();
+      const newBookmarkButton = screen.getByText("New Bookmark");
+      fireEvent.press(newBookmarkButton);
+
+      expect(mockNavigation.navigate).toHaveBeenCalledWith('NewBookmark', { currentFolderId: null });
+    });
+
+    it("navigates to New Bookmark screen", () => {
+      renderWithProviders();
+
+      const newBookmarkButton = screen.getByText("New Bookmark");
+      fireEvent.press(newBookmarkButton);
+
+      expect(mockNavigation.navigate).toHaveBeenCalledWith('NewBookmark', expect.any(Object));
     });
   });
+
+
+  describe("Text selection during editing", () => {
+    it("clears selection when changing text", async () => {
+      renderWithProviders();
+
+      const newFolderButtons = screen.getAllByText("New Folder");
+      
+      await act(async () => {
+        fireEvent.press(newFolderButtons[0]);
+      });
+
+      await waitFor(() => {
+        const inputs = screen.queryAllByDisplayValue(/New Folder/);
+        expect(inputs.length).toBeGreaterThan(0);
+      });
+
+      const inputs = screen.queryAllByDisplayValue(/New Folder/);
+      const editingInput = inputs[0];
+
+      await act(async () => {
+        fireEvent.changeText(editingInput, "Changed");
+      });
+
+      // Text was changed, selection should be cleared
+      expect(editingInput.props.value).toBe("Changed");
+    });
+  });
+
+  describe("Selection mode", () => {
+    it("toggles selection mode when Select button is pressed", () => {
+      renderWithProviders();
+
+      const selectButton = screen.getAllByText(/Select/)[0];
+      
+      // Should not throw
+      expect(() => fireEvent.press(selectButton)).not.toThrow();
+    });
+
+    it("exposes toggleSelectionMode function via navigation params", async () => {
+      renderWithProviders();
+
+      await waitFor(() => {
+        const calls = mockNavigation.setParams.mock.calls;
+        const hasToggleFunc = calls.some(call => 
+          call[0] && typeof call[0]._toggleSelectionMode === 'function'
+        );
+        expect(hasToggleFunc).toBe(true);
+      });
+    });
+  });
+
 });

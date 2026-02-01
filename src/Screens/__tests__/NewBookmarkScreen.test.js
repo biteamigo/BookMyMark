@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import NewBookmarkScreen from '../NewBookmarkScreen';
 import { DatabaseProvider } from '../../Context/DatabaseContext';
@@ -284,5 +284,179 @@ describe('NewBookmarkScreen', () => {
         expect.any(Array)
       );
     }, { timeout: 3000 });
+  });
+
+  it('allows saving duplicate URL when "Add Anyway" is pressed', async () => {
+    const db = getDatabase();
+    const { BookmarkRepository } = require('../../database/repositories');
+    const bookmarkRepo = new BookmarkRepository(db);
+    bookmarkRepo.create({ name: 'Existing', url: 'https://duplicate.com' }, [folderId]);
+    
+    renderWithProviders({ params: { currentFolderId: folderId } });
+    
+    const nameInput = screen.getByTestId('name-input');
+    const urlInput = screen.getByTestId('url-input');
+    
+    fireEvent.changeText(nameInput, 'Duplicate Test');
+    fireEvent.changeText(urlInput, 'https://duplicate.com');
+    
+    const saveButton = screen.getByTestId('save-button');
+    
+    await act(async () => {
+      fireEvent.press(saveButton);
+    });
+    
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Duplicate URL',
+        expect.stringContaining('already exists'),
+        expect.any(Array)
+      );
+    });
+    
+    const alertCall = Alert.alert.mock.calls[Alert.alert.mock.calls.length - 1];
+    const buttons = alertCall[2];
+    const addAnywayButton = buttons.find(b => b.text === 'Add Anyway');
+    
+    expect(addAnywayButton).toBeDefined();
+    
+    await act(async () => {
+      addAnywayButton.onPress();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+    
+    expect(mockNavigation.goBack).toHaveBeenCalled();
+  });
+
+  it('saves bookmark with tags correctly', async () => {
+    const { TagRepository } = require('../../database/repositories');
+    const tagRepoSpy = jest.spyOn(TagRepository.prototype, 'setTagsForBookmark');
+    
+    renderWithProviders({ params: { currentFolderId: folderId } });
+    
+    const nameInput = screen.getByTestId('name-input');
+    const urlInput = screen.getByTestId('url-input');
+    const tagInput = screen.getByTestId('tag-input');
+    
+    fireEvent.changeText(nameInput, 'Tagged Bookmark');
+    fireEvent.changeText(urlInput, 'https://tagged.com');
+    
+    fireEvent.changeText(tagInput, 'tech');
+    await act(async () => {
+      fireEvent(tagInput, 'submitEditing');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+    
+    fireEvent.changeText(tagInput, 'programming');
+    await act(async () => {
+      fireEvent(tagInput, 'submitEditing');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+    
+    const saveButton = screen.getByTestId('save-button');
+    await act(async () => {
+      fireEvent.press(saveButton);
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+    
+    expect(tagRepoSpy).toHaveBeenCalled();
+    
+    tagRepoSpy.mockRestore();
+  });
+
+  it('handles save error gracefully', async () => {
+    const { BookmarkRepository } = require('../../database/repositories');
+    const createSpy = jest.spyOn(BookmarkRepository.prototype, 'create').mockImplementation(() => {
+      throw new Error('Database error');
+    });
+    
+    renderWithProviders({ params: { currentFolderId: folderId } });
+    
+    const nameInput = screen.getByTestId('name-input');
+    const urlInput = screen.getByTestId('url-input');
+    
+    fireEvent.changeText(nameInput, 'Test');
+    fireEvent.changeText(urlInput, 'https://test.com');
+    
+    const saveButton = screen.getByTestId('save-button');
+    
+    await act(async () => {
+      fireEvent.press(saveButton);
+    });
+    
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith('Error', 'Failed to save bookmark. Please try again.');
+    });
+    
+    createSpy.mockRestore();
+  });
+
+  it('shows discard confirmation and discards changes when confirmed', async () => {
+    renderWithProviders();
+    
+    const nameInput = screen.getByTestId('name-input');
+    
+    fireEvent.changeText(nameInput, 'Test');
+    
+    const cancelButton = screen.getByTestId('cancel-button');
+    
+    await act(async () => {
+      fireEvent.press(cancelButton);
+    });
+    
+    await waitFor(() => {
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Discard Changes?',
+        'You have unsaved changes. Are you sure you want to cancel?',
+        expect.any(Array)
+      );
+    });
+    
+    const alertCall = Alert.alert.mock.calls[Alert.alert.mock.calls.length - 1];
+    const buttons = alertCall[2];
+    const discardButton = buttons.find(b => b.text === 'Discard');
+    
+    expect(discardButton).toBeDefined();
+    
+    await act(async () => {
+      discardButton.onPress();
+    });
+    
+    expect(mockNavigation.goBack).toHaveBeenCalled();
+  });
+
+  it('clears folder error when folders are selected via callback', async () => {
+    renderWithProviders();
+    
+    const saveButton = screen.getByTestId('save-button');
+    
+    await act(async () => {
+      fireEvent.press(saveButton);
+    });
+    
+    await waitFor(() => {
+      expect(screen.getByText('Please select at least one folder')).toBeTruthy();
+    });
+    
+    const folderButton = screen.getByTestId('folder-picker-button');
+    await act(async () => {
+      fireEvent.press(folderButton);
+    });
+    
+    const navigateCall = mockNavigation.navigate.mock.calls.find(
+      call => call[0] === 'FolderPicker'
+    );
+    const onSelectCallback = navigateCall?.[1]?._onSelect;
+    
+    expect(onSelectCallback).toBeDefined();
+    
+    await act(async () => {
+      onSelectCallback([folderId]);
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+    
+    await waitFor(() => {
+      expect(screen.queryByText('Please select at least one folder')).toBeNull();
+    });
   });
 });

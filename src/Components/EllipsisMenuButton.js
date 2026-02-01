@@ -7,8 +7,11 @@ const EllipsisMenuButton = ({
   onSelect, 
   onNewFolder, 
   onNewBookmark,
+  onDelete,
   viewMode,
-  onViewModeChange 
+  onViewModeChange,
+  isSelectionMode,
+  selectedCount 
 }) => {
   const [menuVisible, setMenuVisible] = useState(false);
 
@@ -29,8 +32,11 @@ const EllipsisMenuButton = ({
         onSelect={onSelect}
         onNewFolder={onNewFolder}
         onNewBookmark={onNewBookmark}
+        onDelete={onDelete}
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
+        isSelectionMode={isSelectionMode}
+        selectedCount={selectedCount}
       />
     </View>
   );

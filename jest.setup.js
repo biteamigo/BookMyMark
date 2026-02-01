@@ -22,6 +22,10 @@ jest.mock("@react-navigation/native", () => {
     useRoute: () => ({
       params: {},
     }),
+    useFocusEffect: jest.fn(() => {
+      // No-op in tests to avoid infinite loops
+      // The initial useEffect will handle data loading
+    }),
     NavigationContainer: ({ children }) => children,
   };
 });
@@ -298,6 +302,17 @@ jest.mock("expo-splash-screen", () => ({
 jest.mock("@expo-google-fonts/nova-round", () => ({
   useFonts: jest.fn(() => [true, null]),
   NovaRound_400Regular: "NovaRound_400Regular",
+}));
+
+// Mock react-native-safe-area-context
+jest.mock("react-native-safe-area-context", () => ({
+  SafeAreaProvider: ({ children }) => children,
+  SafeAreaView: ({ children, style }) => {
+    const React = require("react");
+    const { View } = require("react-native");
+    return <View style={style}>{children}</View>;
+  },
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 
 // Silence console warnings during tests

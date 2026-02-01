@@ -5,13 +5,13 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
   Alert,
   ScrollView,
   Keyboard,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import SearchBar from '../Components/SearchBar';
 import { useDatabase } from '../Context/DatabaseContext';
@@ -26,7 +26,7 @@ import globalStyles from '../CSS/GlobalCss';
  */
 const FolderPickerScreen = ({ navigation, route }) => {
   const { folderRepository } = useDatabase();
-  const { selectedFolderIds = [], onSelect } = route.params || {};
+  const { selectedFolderIds = [], _onSelect } = route.params || {};
   
   const [folders, setFolders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,14 +78,87 @@ const FolderPickerScreen = ({ navigation, route }) => {
 
   useEffect(() => {
     if (searchTerm.trim()) {
-      // When searching, show flat list with full paths
-      const results = folderRepository.search(searchTerm);
-      setHierarchicalFolders(results.map(f => ({ ...f, level: 0, hasChildren: false })));
+      // When searching, build hierarchy for matched folders
+      buildSearchHierarchy();
     } else {
       // When not searching, build hierarchical tree
       buildHierarchicalList();
     }
   }, [searchTerm, folders, expandedIds]);
+
+  const buildSearchHierarchy = () => {
+    const results = folderRepository.search(searchTerm);
+    const hierarchyList = [];
+    const addedIds = new Set();
+    
+    // Get full parent chain for a folder
+    const getParentChain = (folderId) => {
+      const chain = [];
+      let current = folders.find(f => f.id === folderId);
+      
+      while (current) {
+        chain.unshift(current);
+        current = current.parentId ? folders.find(f => f.id === current.parentId) : null;
+      }
+      
+      return chain;
+    };
+    
+    const addFolderWithHierarchy = (folder) => {
+      const chain = getParentChain(folder.id);
+      
+      chain.forEach((f, index) => {
+        if (!addedIds.has(f.id)) {
+          const children = folders.filter(child => child.parentId === f.id);
+          const hasChildren = children.length > 0;
+          const isExpanded = expandedIds.has(f.id);
+          
+          hierarchyList.push({
+            ...f,
+            level: index,
+            hasChildren,
+            isExpanded,
+          });
+          
+          addedIds.add(f.id);
+          
+          // If expanded, add all children
+          if (isExpanded && hasChildren) {
+            children.forEach(child => {
+              if (!addedIds.has(child.id)) {
+                addFolderWithChildren(child, index + 1);
+              }
+            });
+          }
+        }
+      });
+    };
+    
+    const addFolderWithChildren = (folder, level) => {
+      const children = folders.filter(f => f.parentId === folder.id);
+      const hasChildren = children.length > 0;
+      const isExpanded = expandedIds.has(folder.id);
+      
+      if (!addedIds.has(folder.id)) {
+        hierarchyList.push({
+          ...folder,
+          level,
+          hasChildren,
+          isExpanded,
+        });
+        addedIds.add(folder.id);
+      }
+      
+      if (isExpanded && hasChildren) {
+        children.forEach(child => addFolderWithChildren(child, level + 1));
+      }
+    };
+    
+    // Build hierarchy for each matched folder
+    results.forEach(folder => addFolderWithHierarchy(folder));
+    
+    setHierarchicalFolders(hierarchyList);
+  };
 
   const buildHierarchicalList = () => {
     const result = [];
@@ -144,6 +217,7 @@ const FolderPickerScreen = ({ navigation, route }) => {
       setNewFolderName('');
       setNewFolderParentId(null);
       setIsCreatingFolder(false);
+      setShowParentPicker(false);
 
       // Reload folders
       loadFolders();
@@ -262,8 +336,8 @@ const FolderPickerScreen = ({ navigation, route }) => {
   };
 
   const handleDone = () => {
-    if (onSelect) {
-      onSelect(Array.from(selectedIds));
+    if (_onSelect) {
+      _onSelect(Array.from(selectedIds));
     }
     navigation.goBack();
   };
