@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { usePreventRemove } from '@react-navigation/native';
 import SearchBar from '../Components/SearchBar';
 import { useDatabase } from '../Context/DatabaseContext';
 import globalStyles from '../CSS/GlobalCss';
@@ -41,9 +42,64 @@ const FolderPickerScreen = ({ navigation, route }) => {
   const selectedCountOpacity = useRef(new Animated.Value(0)).current;
   const selectedCountHeight = useRef(new Animated.Value(0)).current;
 
+  const hasChanges = selectedIds.size !== selectedFolderIds.length || 
+    ![...selectedIds].every(id => selectedFolderIds.includes(id));
+
+  // Prevent going back if creating folder
+  usePreventRemove(isCreatingFolder, ({ data }) => {
+    Alert.alert(
+      'Discard New Folder?',
+      'You are creating a new folder. Are you sure you want to go back?',
+      [
+        { text: 'Keep Editing', style: 'cancel', onPress: () => {} },
+        { 
+          text: 'Discard', 
+          style: 'destructive', 
+          onPress: () => {
+            setIsCreatingFolder(false);
+            setNewFolderName('');
+            navigation.dispatch(data.action);
+          }
+        }
+      ]
+    );
+  });
+
   useEffect(() => {
     loadFolders();
   }, []);
+
+  // Set up navigation header
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: () => (
+        <Text style={{ 
+          fontFamily: 'NovaRound_400Regular', 
+          fontSize: 17, 
+          color: '#000',
+          letterSpacing: 0.3,
+        }}>
+          Select Folders
+        </Text>
+      ),
+      headerRight: () => (
+        <TouchableOpacity 
+          onPress={handleDone}
+          testID="done-button"
+          style={{ 
+            paddingVertical: 8,
+            paddingLeft: 16,
+            paddingRight: 8,
+            marginRight: 8,
+          }}
+        >
+          <Text style={{ fontSize: 17, fontWeight: '600', color: '#007AFF' }}>
+            Done
+          </Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, handleDone]);
 
   useEffect(() => {
     // Animate selected count banner
@@ -441,27 +497,6 @@ const FolderPickerScreen = ({ navigation, route }) => {
     <SafeAreaView style={[globalStyles.pageView, styles.safeArea]}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        {/* Header Card */}
-        <View style={styles.headerCard}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={styles.closeButton}
-            testID="cancel-button"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="close-circle" size={32} color="#8E8E93" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Select Folders</Text>
-          <TouchableOpacity 
-            onPress={handleDone}
-            testID="done-button"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={styles.doneText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Search Input */}
         <SearchBar
           searchTerm={searchTerm}
           onSearchTermChange={setSearchTerm}
@@ -614,51 +649,15 @@ const FolderPickerScreen = ({ navigation, route }) => {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: '#F8F9FA',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: 'hidden',
+    marginTop: 0,
   },
   searchContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    backgroundColor: '#F8F9FA',
-  },
-  headerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    marginBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 0,
-  },
-  closeButton: {
-    marginRight: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 19,
-    fontWeight: '700',
-    color: '#000',
-    letterSpacing: 0.3,
-    textAlign: 'center',
-  },
-  doneText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#007AFF',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   selectedCountContainer: {
-    marginHorizontal: 20,
+    marginHorizontal: 16,
     marginTop: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -673,9 +672,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   listContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 20,
-    backgroundColor: '#F8F9FA',
   },
   folderItemWrapper: {
     marginBottom: 8,
@@ -810,7 +808,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   newFolderContainer: {
-    marginHorizontal: 20,
+    marginHorizontal: 16,
     marginBottom: 16,
   },
   newFolderButton: {

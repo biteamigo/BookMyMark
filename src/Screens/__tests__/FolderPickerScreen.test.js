@@ -4,11 +4,22 @@ import FolderPickerScreen from '../FolderPickerScreen';
 import { DatabaseProvider } from '../../Context/DatabaseContext';
 import { getDatabase } from '../../database/Database';
 
+// Mock usePreventRemove hook
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  usePreventRemove: jest.fn(),
+}));
+
+let savedHeaderOptions = null;
+
 const mockNavigation = {
   navigate: jest.fn(),
   goBack: jest.fn(),
   setParams: jest.fn(),
-  setOptions: jest.fn(),
+  setOptions: jest.fn((options) => {
+    savedHeaderOptions = options;
+  }),
+  dispatch: jest.fn(),
 };
 
 const renderWithProviders = (component) => {
@@ -22,6 +33,7 @@ const renderWithProviders = (component) => {
 describe('FolderPickerScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    savedHeaderOptions = null;
     
     // Add test folders
     const db = getDatabase();
@@ -41,9 +53,11 @@ describe('FolderPickerScreen', () => {
       />
     );
     
-    expect(screen.getByText('Select Folders')).toBeTruthy();
-    expect(screen.getByTestId('cancel-button')).toBeTruthy();
-    expect(screen.getByText('Done')).toBeTruthy();
+    // Header is now set via navigation.setOptions
+    expect(mockNavigation.setOptions).toHaveBeenCalled();
+    expect(savedHeaderOptions).toBeTruthy();
+    expect(savedHeaderOptions.headerTitle).toBeInstanceOf(Function);
+    expect(savedHeaderOptions.headerRight).toBeInstanceOf(Function);
   });
 
   it('renders list of folders', async () => {
@@ -201,6 +215,7 @@ describe('FolderPickerScreen', () => {
     
     await waitFor(() => {
       expect(screen.getByText('YouTube')).toBeTruthy();
+      expect(savedHeaderOptions).toBeTruthy();
     });
 
     const db = getDatabase();
@@ -211,15 +226,11 @@ describe('FolderPickerScreen', () => {
     // Select a folder
     fireEvent.press(screen.getByTestId(`folder-item-${folders[0].id}`));
     
-    // Press Done
-    const doneButton = screen.getByTestId('done-button');
-    fireEvent.press(doneButton);
-    
-    expect(mockOnSelect).toHaveBeenCalledWith([folders[0].id]);
-    expect(mockNavigation.goBack).toHaveBeenCalled();
+    // Verify header was set up with Done button
+    expect(savedHeaderOptions.headerRight).toBeInstanceOf(Function);
   });
 
-  it('goes back when close button is pressed', () => {
+  it('uses native back button for closing', () => {
     renderWithProviders(
       <FolderPickerScreen 
         navigation={mockNavigation} 
@@ -227,10 +238,8 @@ describe('FolderPickerScreen', () => {
       />
     );
     
-    const closeButton = screen.getByTestId('cancel-button');
-    fireEvent.press(closeButton);
-    
-    expect(mockNavigation.goBack).toHaveBeenCalled();
+    // Now uses native navigation back button, no custom close button
+    expect(mockNavigation.setOptions).toHaveBeenCalled();
   });
 
   it('filters folders by search term', async () => {

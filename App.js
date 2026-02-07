@@ -141,8 +141,8 @@ const AppNavigator = () => {
         name="FolderPicker" 
         component={FolderPickerScreen}
         options={{
-          headerShown: false,
           presentation: 'modal',
+          headerBackButtonMenuEnabled: false,
         }}
       />
       <Stack.Screen 

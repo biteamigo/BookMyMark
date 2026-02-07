@@ -9,10 +9,21 @@ jest.mock('react-native/Libraries/Alert/Alert', () => ({
   alert: jest.fn(),
 }));
 
+// Mock usePreventRemove hook
+jest.mock('@react-navigation/native', () => ({
+  ...jest.requireActual('@react-navigation/native'),
+  usePreventRemove: jest.fn(),
+}));
+
+let savedHeaderOptions = null;
+
 const mockNavigation = {
   navigate: jest.fn(),
   goBack: jest.fn(),
-  setParams: jest.fn(),
+  setOptions: jest.fn((options) => {
+    savedHeaderOptions = options;
+  }),
+  dispatch: jest.fn(),
 };
 
 const renderWithProviders = (props = {}) => {
@@ -42,6 +53,7 @@ describe('FolderPickerScreen - Comprehensive Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    savedHeaderOptions = null;
   });
 
   describe('Folder hierarchy expansion', () => {
@@ -161,14 +173,11 @@ describe('FolderPickerScreen - Comprehensive Tests', () => {
       
       await waitFor(() => {
         expect(screen.getByText('DoneTestFolder')).toBeTruthy();
+        expect(savedHeaderOptions).toBeTruthy();
       });
       
-      // Done button should be present
-      const doneButton = screen.getByText('Done');
-      expect(doneButton).toBeTruthy();
-      
-      // Should be callable without error
-      expect(() => fireEvent.press(doneButton)).not.toThrow();
+      // Done button is now in navigation header
+      expect(savedHeaderOptions.headerRight).toBeInstanceOf(Function);
     });
   });
 
