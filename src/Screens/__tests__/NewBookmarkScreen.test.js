@@ -383,6 +383,59 @@ describe('NewBookmarkScreen', () => {
     expect(screen.getByText('🔍 Use tags to find bookmarks faster')).toBeTruthy();
   });
 
+  it('saves tags with bookmark so they are stored and searchable (stale-closure fix)', async () => {
+    renderWithProviders({ params: { currentFolderId: folderId } });
+
+    const nameInput = screen.getByTestId('name-input');
+    const urlInput = screen.getByTestId('url-input');
+    const tagInput = screen.getByTestId('tag-input');
+
+    fireEvent.changeText(nameInput, 'Tagged Bookmark');
+    fireEvent.changeText(urlInput, 'https://tagged-example.com');
+
+    await waitFor(() => expect(screen.getByText('Test Folder')).toBeTruthy());
+
+    // Add tags (user adds tags then saves - tags must be in handleSave closure)
+    fireEvent.changeText(tagInput, 'Ravi');
+    await waitFor(() => expect(screen.getByTestId('add-tag-button')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('add-tag-button'));
+
+    fireEvent.changeText(tagInput, 'maama');
+    await waitFor(() => expect(screen.getByTestId('add-tag-button')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('add-tag-button'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Ravi')).toBeTruthy();
+      expect(screen.getByText('maama')).toBeTruthy();
+    });
+
+    await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+    const HeaderRight = savedHeaderOptions.headerRight();
+    const { getByText: getHeaderText } = render(HeaderRight);
+    const saveButton = getHeaderText('Save');
+    fireEvent.press(saveButton);
+
+    await waitFor(() => {
+      expect(mockNavigation.goBack).toHaveBeenCalled();
+    }, { timeout: 3000 });
+
+    const db = getDatabase();
+    const { BookmarkRepository, TagRepository } = require('../../database/repositories');
+    const bookmarkRepo = new BookmarkRepository(db);
+    const tagRepo = new TagRepository(db);
+
+    const saved = bookmarkRepo.getAll().find(b => b.name === 'Tagged Bookmark');
+    expect(saved).toBeTruthy();
+
+    const savedTags = tagRepo.getTagsForBookmark(saved.id).map(t => t.name);
+    expect(savedTags).toContain('ravi');
+    expect(savedTags).toContain('maama');
+
+    expect(bookmarkRepo.searchByTag('ravi').map(b => b.id)).toContain(saved.id);
+    expect(bookmarkRepo.searchByTag('Ravi').map(b => b.id)).toContain(saved.id);
+    expect(bookmarkRepo.searchByTag('maama').map(b => b.id)).toContain(saved.id);
+  });
+
   it('shows duplicate URL alert when URL already exists', async () => {
     const db = getDatabase();
     const { BookmarkRepository } = require('../../database/repositories');

@@ -26,7 +26,9 @@ export const getDatabase = () => {
 const initializeDatabase = (db) => {
   // Enable foreign keys
   db.execSync("PRAGMA foreign_keys = ON;");
-  
+  // Make LIKE comparisons case-insensitive (so tag search matches regardless of case)
+  db.execSync("PRAGMA case_sensitive_like = OFF;");
+
   // Create tables
   db.execSync(CREATE_TABLES_SQL);
 

@@ -146,7 +146,7 @@ const NewBookmarkScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Failed to save bookmark. Please try again.');
       console.error('Save bookmark error:', error);
     }
-  }, [name, url, selectedFolderIds, bookmarkRepository, tagRepository, navigation]);
+  }, [name, url, selectedFolderIds, tags, bookmarkRepository, tagRepository, navigation]);
 
   const saveBookmark = (finalUrl) => {
     // Create bookmark
