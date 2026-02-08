@@ -14,6 +14,11 @@ describe("DropdownMenu", () => {
     onSelect: mockOnSelect,
     onNewFolder: mockOnNewFolder,
     onNewBookmark: mockOnNewBookmark,
+    onDelete: jest.fn(),
+    onViewModeChange: jest.fn(),
+    viewMode: "grid",
+    isSelectionMode: false,
+    selectedCount: 0,
   };
 
   beforeEach(() => {
@@ -91,6 +96,68 @@ describe("DropdownMenu", () => {
       expect(() => {
         fireEvent.press(screen.getByText("New Bookmark"));
       }).not.toThrow();
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("calls onViewModeChange with grid and onClose when Grid is pressed", () => {
+      const onViewModeChange = jest.fn();
+      render(<DropdownMenu {...defaultProps} onViewModeChange={onViewModeChange} />);
+      fireEvent.press(screen.getByText("Grid"));
+      expect(onViewModeChange).toHaveBeenCalledWith("grid");
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("calls onViewModeChange with list and onClose when List is pressed", () => {
+      const onViewModeChange = jest.fn();
+      render(<DropdownMenu {...defaultProps} onViewModeChange={onViewModeChange} />);
+      fireEvent.press(screen.getByText("List"));
+      expect(onViewModeChange).toHaveBeenCalledWith("list");
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+  });
+
+  describe("selection mode", () => {
+    it("shows Delete and Selected count when isSelectionMode is true", () => {
+      render(
+        <DropdownMenu
+          {...defaultProps}
+          isSelectionMode={true}
+          selectedCount={3}
+        />
+      );
+      expect(screen.getByText("Selected (3)")).toBeOnTheScreen();
+      expect(screen.getByText("Delete")).toBeOnTheScreen();
+      expect(screen.queryByText("New Folder")).toBeNull();
+      expect(screen.queryByText("New Bookmark")).toBeNull();
+    });
+
+    it("calls onDelete and onClose when Delete is pressed and selectedCount > 0", () => {
+      const onDelete = jest.fn();
+      render(
+        <DropdownMenu
+          {...defaultProps}
+          isSelectionMode={true}
+          selectedCount={1}
+          onDelete={onDelete}
+        />
+      );
+      fireEvent.press(screen.getByText("Delete"));
+      expect(onDelete).toHaveBeenCalledTimes(1);
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not call onDelete when Delete is pressed and selectedCount is 0", () => {
+      const onDelete = jest.fn();
+      render(
+        <DropdownMenu
+          {...defaultProps}
+          isSelectionMode={true}
+          selectedCount={0}
+          onDelete={onDelete}
+        />
+      );
+      fireEvent.press(screen.getByText("Delete"));
+      expect(onDelete).not.toHaveBeenCalled();
       expect(mockOnClose).toHaveBeenCalled();
     });
   });

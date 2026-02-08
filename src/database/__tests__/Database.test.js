@@ -1,4 +1,4 @@
-import { getDatabase, resetDatabase, clearAllData, getTableStats, exportToJSON, rebuildFTSIndexes } from '../Database';
+import { getDatabase, resetDatabase, clearAllData, getTableStats, exportToJSON, rebuildFTSIndexes, executeTransaction } from '../Database';
 
 describe('Database', () => {
   let db;
@@ -16,6 +16,26 @@ describe('Database', () => {
     it('returns same instance on multiple calls', () => {
       const db2 = getDatabase();
       expect(db).toBe(db2);
+    });
+  });
+
+  describe('executeTransaction', () => {
+    it('returns result when operations succeed', () => {
+      const result = executeTransaction(db, () => 42);
+      expect(result).toBe(42);
+    });
+
+    it('calls ROLLBACK and rethrows when operations throw', () => {
+      const execSpy = jest.spyOn(db, 'execSync');
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      expect(() => {
+        executeTransaction(db, () => {
+          throw new Error('Intentional failure');
+        });
+      }).toThrow('Intentional failure');
+      expect(execSpy).toHaveBeenCalledWith('ROLLBACK;');
+      consoleSpy.mockRestore();
+      execSpy.mockRestore();
     });
   });
 

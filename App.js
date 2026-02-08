@@ -14,7 +14,6 @@ LogBox.ignoreLogs([
   // This is a controlled pattern for better UX
 ]);
 import FolderViewScreen from "./src/Screens/FolderViewScreen.js";
-import NewFolderScreen from "./src/Screens/NewFolderScreen.js";
 import NewBookmarkScreen from "./src/Screens/NewBookmarkScreen.js";
 import FolderPickerScreen from "./src/Screens/FolderPickerScreen.js";
 import DebugScreen from "./src/Screens/DebugScreen.js";
@@ -128,7 +127,6 @@ const AppNavigator = () => {
         component={FolderViewScreen}
         initialParams={{ folderId: null }}
       />
-      <Stack.Screen name="NewFolder" component={NewFolderScreen} />
       <Stack.Screen 
         name="NewBookmark" 
         component={NewBookmarkScreen}

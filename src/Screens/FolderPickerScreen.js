@@ -432,11 +432,12 @@ const FolderPickerScreen = ({ navigation, route }) => {
             {hasChildren ? (
               <TouchableOpacity
                 onPress={(e) => {
-                  e.stopPropagation();
+                  e?.stopPropagation?.();
                   toggleExpanded(item.id);
                 }}
                 style={styles.expandButton}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                testID={`expand-folder-${item.id}`}
               >
                 <Ionicons
                   name={isExpanded ? 'chevron-down' : 'chevron-forward'}

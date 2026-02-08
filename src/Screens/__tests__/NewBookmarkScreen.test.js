@@ -157,6 +157,89 @@ describe('NewBookmarkScreen', () => {
     expect(nameInput.props.value).toBe(longName);
   });
 
+  it('shows validation error when Save with empty name', async () => {
+    const { getByText } = renderWithProviders({ params: { currentFolderId: folderId } });
+    fireEvent.changeText(screen.getByTestId('url-input'), 'https://test.com');
+    await waitFor(() => expect(screen.getByText('Test Folder')).toBeTruthy());
+
+    await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+    const headerElement = savedHeaderOptions.headerRight();
+    render(headerElement);
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(getByText('Bookmark name is required')).toBeTruthy();
+    });
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+  });
+
+  it('shows validation error when Save with empty URL', async () => {
+    const { getByText } = renderWithProviders({ params: { currentFolderId: folderId } });
+    fireEvent.changeText(screen.getByTestId('name-input'), 'My Bookmark');
+    await waitFor(() => expect(screen.getByText('Test Folder')).toBeTruthy());
+
+    await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+    const headerElement = savedHeaderOptions.headerRight();
+    render(headerElement);
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(getByText('URL is required')).toBeTruthy();
+    });
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+  });
+
+  it('shows validation error when Save with no folder selected', async () => {
+    const { getByText } = renderWithProviders();
+    fireEvent.changeText(screen.getByTestId('name-input'), 'My Bookmark');
+    fireEvent.changeText(screen.getByTestId('url-input'), 'https://test.com');
+
+    await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+    const headerElement = savedHeaderOptions.headerRight();
+    render(headerElement);
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(getByText('Please select at least one folder')).toBeTruthy();
+    });
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+  });
+
+  it('shows validation error when name exceeds 100 characters', async () => {
+    const { getByText } = renderWithProviders({ params: { currentFolderId: folderId } });
+    fireEvent.changeText(screen.getByTestId('name-input'), 'A'.repeat(101));
+    fireEvent.changeText(screen.getByTestId('url-input'), 'https://test.com');
+    await waitFor(() => expect(screen.getByText('Test Folder')).toBeTruthy());
+
+    await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+    const headerElement = savedHeaderOptions.headerRight();
+    render(headerElement);
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(getByText('Name must be less than 100 characters')).toBeTruthy();
+    });
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+  });
+
+  it('shows validation error for invalid URL format', async () => {
+    const { getByText } = renderWithProviders({ params: { currentFolderId: folderId } });
+    fireEvent.changeText(screen.getByTestId('name-input'), 'Test');
+    // Use a string that fails URL() after https:// prefix (e.g. space or invalid host)
+    fireEvent.changeText(screen.getByTestId('url-input'), 'not a valid url');
+    await waitFor(() => expect(screen.getByText('Test Folder')).toBeTruthy());
+
+    await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+    const headerElement = savedHeaderOptions.headerRight();
+    render(headerElement);
+    fireEvent.press(screen.getByText('Save'));
+
+    await waitFor(() => {
+      expect(getByText('Please enter a valid URL')).toBeTruthy();
+    });
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
+  });
+
   it('opens folder picker when tapped', () => {
     renderWithProviders();
     

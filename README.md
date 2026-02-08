@@ -114,8 +114,7 @@ BookMyMark/
 │   ├── Screens/              # Screen components
 │   │   ├── HomeScreen.js
 │   │   ├── BookMarkListScreen.js
-│   │   ├── NewBookMarkScreen.js
-│   │   └── NewFolderScreen.js
+│   │   └── NewBookMarkScreen.js
 │   └── Utils/                # Utility functions and constants
 │       └── Constants.js
 ├── package.json

@@ -77,36 +77,32 @@ describe('FolderViewScreen - Comprehensive Tests', () => {
       const bookmarkRepo = new BookmarkRepository(db);
       
       const folder = folderRepo.create({ name: 'BookmarksFolder', icon: 'folder' });
-      bookmarkRepo.create({ name: 'Test Bookmark', url: 'https://test.com' }, [folder.id]);
+      const bookmark = bookmarkRepo.create({ name: 'Test Bookmark', url: 'https://test.com' }, [folder.id]);
       
       const route = { params: { folderId: folder.id } };
       
       renderWithProviders(route);
       
       await waitFor(() => {
-        expect(screen.getByText('Test Bookmark')).toBeTruthy();
+        expect(screen.getByTestId(`bookmark-item-${bookmark.id}`)).toBeTruthy();
       });
     });
 
-    it('handles bookmarks without URL gracefully', async () => {
+    it('displays bookmark in subfolder', async () => {
       const { FolderRepository, BookmarkRepository } = require('../../database/repositories');
       const folderRepo = new FolderRepository(db);
       const bookmarkRepo = new BookmarkRepository(db);
       
-      const folder = folderRepo.create({ name: 'NoURLFolder', icon: 'folder' });
-      const bookmark = bookmarkRepo.create({ name: 'No URL BM', url: 'https://nourl.com' }, [folder.id]);
+      const folder = folderRepo.create({ name: 'DisplayBMFolder', icon: 'folder' });
+      const bookmark = bookmarkRepo.create({ name: 'Subfolder Bookmark', url: 'https://example.com' }, [folder.id]);
       
       const route = { params: { folderId: folder.id } };
       
       renderWithProviders(route);
       
       await waitFor(() => {
-        expect(screen.getByText('No URL BM')).toBeTruthy();
+        expect(screen.getByTestId(`bookmark-item-${bookmark.id}`)).toBeTruthy();
       });
-      
-      // Simply verify the bookmark renders - don't test URL opening in comprehensive suite
-      const bookmarkItem = screen.getByText('No URL BM');
-      expect(bookmarkItem).toBeTruthy();
     });
   });
 

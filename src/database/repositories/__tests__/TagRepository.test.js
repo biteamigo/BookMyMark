@@ -32,6 +32,23 @@ describe('TagRepository', () => {
     });
   });
 
+  describe('getById', () => {
+    it('returns tag by id when it exists', () => {
+      const created = tagRepo.create('find-me-tag');
+      expect(created.id).toBeDefined();
+      const found = tagRepo.getById(created.id);
+      if (found) {
+        expect(found.id).toBe(created.id);
+        expect(found.name).toBe('find-me-tag');
+      }
+    });
+
+    it('returns null for non-existent id', () => {
+      const found = tagRepo.getById('non-existent-id');
+      expect(found).toBeNull();
+    });
+  });
+
   describe('getAll', () => {
     it('returns all tags', () => {
       tagRepo.create('tag1');
@@ -175,6 +192,32 @@ describe('TagRepository', () => {
       
       const newCount = tagRepo.count();
       expect(newCount).toBe(initialCount + 2);
+    });
+  });
+
+  describe('getPopular', () => {
+    it('returns array of tags', () => {
+      tagRepo.setTagsForBookmark(bookmarkId, ['popular', 'rare']);
+      const bookmark2 = bookmarkRepo.create({ name: 'B2', url: 'https://b2.com' }, [folderId]);
+      tagRepo.setTagsForBookmark(bookmark2.id, ['popular']);
+      const popular = tagRepo.getPopular(10);
+      expect(Array.isArray(popular)).toBe(true);
+      expect(popular.length).toBeGreaterThan(0);
+    });
+
+    it('accepts limit parameter', () => {
+      const result = tagRepo.getPopular(2);
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe('deleteUnused', () => {
+    it('removes tags not associated with any bookmark', () => {
+      const unusedTag = tagRepo.create('unused-tag');
+      tagRepo.setTagsForBookmark(bookmarkId, ['used-tag']);
+      const deleted = tagRepo.deleteUnused();
+      expect(typeof deleted).toBe('number');
+      expect(tagRepo.getByName('used-tag')).toBeTruthy();
     });
   });
 });

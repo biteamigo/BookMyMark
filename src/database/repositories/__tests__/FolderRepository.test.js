@@ -162,4 +162,5 @@ describe('FolderRepository', () => {
       expect(Array.isArray(results)).toBe(true);
     });
   });
+
 });

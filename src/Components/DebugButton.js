@@ -13,7 +13,7 @@ const DebugButton = ({ onPress }) => {
   }
 
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress}>
+    <TouchableOpacity style={styles.button} onPress={onPress} testID="debug-button">
       <Ionicons name="bug-outline" size={22} color="#FF9500" />
     </TouchableOpacity>
   );

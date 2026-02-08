@@ -1,4 +1,5 @@
 import { BookmarkRepository } from '../BookmarkRepository';
+import { TagRepository } from '../TagRepository';
 import { getDatabase, resetDatabase } from '../../Database';
 
 describe('BookmarkRepository', () => {
@@ -103,6 +104,30 @@ describe('BookmarkRepository', () => {
 
       const bookmarks = bookmarkRepo.getByFolder('empty-folder');
       expect(bookmarks).toEqual([]);
+    });
+  });
+
+  describe('getByTag', () => {
+    it('returns bookmarks that have the given tag', () => {
+      const tagRepo = new TagRepository(db);
+      const b1 = bookmarkRepo.create({ name: 'B1', url: 'https://b1.com' }, [folderId]);
+      const b2 = bookmarkRepo.create({ name: 'B2', url: 'https://b2.com' }, [folderId]);
+      tagRepo.setTagsForBookmark(b1.id, ['js']);
+      tagRepo.setTagsForBookmark(b2.id, ['js']);
+      const jsTag = tagRepo.getByName('js');
+      const bookmarks = bookmarkRepo.getByTag(jsTag.id);
+      expect(bookmarks.length).toBe(2);
+      expect(bookmarks.map(b => b.id)).toContain(b1.id);
+      expect(bookmarks.map(b => b.id)).toContain(b2.id);
+    });
+
+    it('returns empty array when no bookmarks have the tag', () => {
+      const tagRepo = new TagRepository(db);
+      const tag = tagRepo.create('orphan-tag');
+      expect(tag).toBeTruthy();
+      const bookmarks = bookmarkRepo.getByTag(tag.id);
+      expect(Array.isArray(bookmarks)).toBe(true);
+      expect(bookmarks.length).toBe(0);
     });
   });
 

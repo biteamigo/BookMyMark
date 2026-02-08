@@ -214,7 +214,7 @@ describe('FolderPickerScreen', () => {
     );
     
     await waitFor(() => {
-      expect(screen.getByText('YouTube')).toBeTruthy();
+      expect(screen.getAllByText('YouTube').length).toBeGreaterThan(0);
       expect(savedHeaderOptions).toBeTruthy();
     });
 
@@ -222,12 +222,25 @@ describe('FolderPickerScreen', () => {
     const { FolderRepository } = require('../../database/repositories');
     const folderRepo = new FolderRepository(db);
     const folders = folderRepo.getAll();
+    const firstFolderId = folders[0].id;
 
-    // Select a folder
-    fireEvent.press(screen.getByTestId(`folder-item-${folders[0].id}`));
-    
-    // Verify header was set up with Done button
-    expect(savedHeaderOptions.headerRight).toBeInstanceOf(Function);
+    await act(async () => {
+      fireEvent.press(screen.getByTestId(`folder-item-${firstFolderId}`));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('✓ 1 folder selected')).toBeTruthy();
+    });
+
+    const latestOptions = mockNavigation.setOptions.mock.calls[mockNavigation.setOptions.mock.calls.length - 1][0];
+    const { getByText: getByTextInHeader } = render(latestOptions.headerRight());
+    fireEvent.press(getByTextInHeader('Done'));
+
+    // Done invokes the callback and closes; headerRight in tests can capture initial state,
+    // so we assert callback and goBack were called and that selection UI was shown
+    expect(mockOnSelect).toHaveBeenCalled();
+    expect(Array.isArray(mockOnSelect.mock.calls[0][0])).toBe(true);
+    expect(mockNavigation.goBack).toHaveBeenCalled();
   });
 
   it('uses native back button for closing', () => {
@@ -346,18 +359,13 @@ describe('FolderPickerScreen', () => {
         expect(screen.getByText('Parent')).toBeTruthy();
       });
 
-      const parentItem = screen.getByTestId(`folder-item-${parentId}`);
+      expect(screen.queryByText('Child')).toBeNull();
+      const expandButton = screen.getByTestId(`expand-folder-${parentId}`);
+      fireEvent.press(expandButton);
       
-      // Tap the parent folder item to expand
-      fireEvent.press(parentItem);
-      
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      await waitFor(() => {
+        expect(screen.getByText('Child')).toBeTruthy();
       });
-
-      // Note: Expansion requires tapping the chevron specifically
-      // This test verifies the structure is present
-      expect(screen.getByText('Parent')).toBeTruthy();
     });
 
     it('shows parent folder with blue dot when child is selected', async () => {

@@ -94,9 +94,14 @@ const createMockDatabase = () => ({
       return { changes: index !== -1 ? 1 : 0 };
     }
     if (sql.includes("DELETE FROM folders")) {
-      const id = params[0];
       const initialLength = mockDbData.folders.length;
-      mockDbData.folders = mockDbData.folders.filter(f => f.id !== id);
+      if (sql.includes("IN (")) {
+        const ids = params || [];
+        mockDbData.folders = mockDbData.folders.filter(f => !ids.includes(f.id));
+      } else {
+        const id = params[0];
+        mockDbData.folders = mockDbData.folders.filter(f => f.id !== id);
+      }
       return { changes: initialLength - mockDbData.folders.length };
     }
     
@@ -128,8 +133,8 @@ const createMockDatabase = () => ({
       return { changes: index !== -1 ? 1 : 0 };
     }
     if (sql.includes("DELETE FROM bookmarks")) {
-      const id = params[0];
       const initialLength = mockDbData.bookmarks.length;
+      const id = params[0];
       mockDbData.bookmarks = mockDbData.bookmarks.filter(b => b.id !== id);
       return { changes: initialLength - mockDbData.bookmarks.length };
     }
@@ -152,9 +157,16 @@ const createMockDatabase = () => ({
     }
     if (sql.includes("DELETE FROM folder_bookmarks")) {
       const initialLength = mockDbData.folder_bookmarks.length;
-      mockDbData.folder_bookmarks = mockDbData.folder_bookmarks.filter(
-        fb => !(fb.bookmarkId === params[0] && fb.folderId === params[1])
-      );
+      if (sql.includes("IN (")) {
+        const folderIds = params || [];
+        mockDbData.folder_bookmarks = mockDbData.folder_bookmarks.filter(
+          fb => !folderIds.includes(fb.folderId)
+        );
+      } else {
+        mockDbData.folder_bookmarks = mockDbData.folder_bookmarks.filter(
+          fb => !(fb.bookmarkId === params[0] && fb.folderId === params[1])
+        );
+      }
       return { changes: initialLength - mockDbData.folder_bookmarks.length };
     }
     
@@ -212,9 +224,55 @@ const createMockDatabase = () => ({
       }
       return mockDbData.folders;
     }
+    // FOLDER queries - root (parentId IS NULL)
+    if (sql.includes("FROM folders") && sql.includes("parentId IS NULL")) {
+      return mockDbData.folders.filter(f => f.parentId == null || f.parentId === undefined);
+    }
+    // FOLDER queries - subfolders (parentId = ?)
+    if (sql.includes("FROM folders") && sql.includes("parentId = ?") && params && params[0] !== undefined) {
+      return mockDbData.folders.filter(f => f.parentId === params[0]);
+    }
     // FOLDER queries (general)
     if (sql.includes("FROM folders")) {
       return mockDbData.folders;
+    }
+    // getFolders(bookmarkId): SELECT folderId FROM folder_bookmarks WHERE bookmarkId = ?
+    if (sql.includes("folder_bookmarks") && sql.includes("WHERE bookmarkId = ?") && params && params.length === 1 && !sql.includes("NOT IN")) {
+      return mockDbData.folder_bookmarks
+        .filter(fb => fb.bookmarkId === params[0])
+        .map(fb => ({ folderId: fb.folderId }));
+    }
+    // countFolderContents: SELECT DISTINCT b.id ... WHERE fb.folderId = ?
+    if (sql.includes("folder_bookmarks") && sql.includes("bookmarks b") && params && params.length === 1) {
+      const folderId = params[0];
+      const ids = [...new Set(
+        mockDbData.folder_bookmarks
+          .filter(fb => fb.folderId === folderId)
+          .map(fb => fb.bookmarkId)
+      )];
+      return ids.map(id => ({ id }));
+    }
+    // cascadeDelete: SELECT DISTINCT bookmarkId FROM folder_bookmarks WHERE folderId IN (...)
+    if (sql.includes("folder_bookmarks") && sql.includes("bookmarkId") && sql.includes("IN (")) {
+      const folderIds = params || [];
+      const out = [];
+      const seen = new Set();
+      mockDbData.folder_bookmarks
+        .filter(fb => folderIds.includes(fb.folderId))
+        .forEach(fb => {
+          if (!seen.has(fb.bookmarkId)) {
+            seen.add(fb.bookmarkId);
+            out.push({ bookmarkId: fb.bookmarkId });
+          }
+        });
+      return out;
+    }
+    // cascadeDelete: SELECT folderId FROM folder_bookmarks WHERE bookmarkId = ? AND folderId NOT IN (...)
+    if (sql.includes("folder_bookmarks") && sql.includes("folderId") && params) {
+      const [bookmarkId, ...folderIds] = params;
+      return mockDbData.folder_bookmarks
+        .filter(fb => fb.bookmarkId === bookmarkId && !folderIds.includes(fb.folderId))
+        .map(fb => ({ folderId: fb.folderId }));
     }
     // BOOKMARK BY FOLDER
     if (sql.includes("FROM bookmarks b") && sql.includes("folder_bookmarks fb")) {
@@ -244,7 +302,7 @@ const createMockDatabase = () => ({
     if (sql.includes("FROM tags")) {
       return mockDbData.tags;
     }
-    // FOLDER_BOOKMARKS
+    // FOLDER_BOOKMARKS (general)
     if (sql.includes("FROM folder_bookmarks")) {
       return mockDbData.folder_bookmarks;
     }
@@ -274,6 +332,12 @@ const createMockDatabase = () => ({
     }
     if (sql.includes("FROM tags WHERE name")) {
       return mockDbData.tags.find(t => t.name === params[0]) || null;
+    }
+    if (sql.includes("FROM tags WHERE id")) {
+      return mockDbData.tags.find(t => t.id === params[0]) || null;
+    }
+    if (sql.includes("sqlite_master")) {
+      return { count: 2 };
     }
     return null;
   }),

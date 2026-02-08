@@ -44,14 +44,23 @@
     ],
     "collectCoverage": true,
     "collectCoverageFrom": [
-      "**/*.{js,jsx}",
+      "src/**/*.{js,jsx}",
       "!**/coverage/**",
       "!**/node_modules/**",
       "!**/babel.config.js",
       "!**/jest.setup.js",
-      "!**/src/Screens/NewBookMarkScreen.js",
-      "!**/src/Screens/NewFolderScreen.js"
-    ]
+      "!**/__tests__/**",
+      "!**/index.js",
+      "!**/DebugScreen.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 75,
+        "branches": 70,
+        "functions": 75,
+        "lines": 76
+      }
+    }
   },
   "private": true
 }

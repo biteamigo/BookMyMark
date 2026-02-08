@@ -352,6 +352,7 @@ const FolderViewScreen = ({ navigation, route }) => {
         return (
           <View style={styles.bookmarkStyleGrid}>
             <TouchableOpacity
+              testID={`bookmark-item-${item.id}`}
               style={[styles.bookmarkTouchableGrid, isSelected && styles.selectedItem]}
               onPress={() => handleItemPress(item)}
             >
@@ -385,6 +386,7 @@ const FolderViewScreen = ({ navigation, route }) => {
         return (
           <View style={styles.bookmarkContainer}>
             <TouchableOpacity
+              testID={`bookmark-item-${item.id}`}
               style={[styles.bookmarkTouchable, isSelected && styles.selectedItem]}
               onPress={() => handleItemPress(item)}
             >
