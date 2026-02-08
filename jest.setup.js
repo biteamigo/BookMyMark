@@ -212,13 +212,34 @@ const createMockDatabase = () => ({
       throw new Error("FTS5 not available in test environment");
     }
     
-    // FOLDER SEARCH with LIKE (fallback)
+    // FOLDER SEARCH with LIKE scoped by parentId (searchInFolder fallback, single level)
+    if (sql.includes("FROM folders") && sql.includes("LIKE") && (sql.includes("parentId IS NULL") || sql.includes("parentId = ?"))) {
+      const pattern = params?.[0];
+      const parentId = params?.length === 2 ? params[1] : null;
+      const searchTerm = pattern ? pattern.replace(/%/g, '').toLowerCase() : '';
+      return mockDbData.folders.filter(f => {
+        const nameMatch = !searchTerm || (f.name && f.name.toLowerCase().includes(searchTerm));
+        const parentMatch = parentId === null || parentId === undefined
+          ? (f.parentId == null || f.parentId === undefined)
+          : (f.parentId === parentId);
+        return nameMatch && parentMatch;
+      });
+    }
+    // FOLDER SEARCH with id IN (searchInFolder recursive: match name and id in descendant list)
+    if (sql.includes("FROM folders") && sql.includes("LIKE") && sql.includes("id IN (")) {
+      const pattern = params?.[0];
+      const ids = (params && params.length > 1) ? params.slice(1) : [];
+      const searchTerm = pattern ? pattern.replace(/%/g, '').toLowerCase() : '';
+      return mockDbData.folders.filter(f =>
+        ids.includes(f.id) && (!searchTerm || (f.name && f.name.toLowerCase().includes(searchTerm)))
+      );
+    }
+    // FOLDER SEARCH with LIKE (fallback, global)
     if (sql.includes("FROM folders") && sql.includes("LIKE")) {
       const pattern = params?.[0];
       if (pattern) {
-        // Convert SQL LIKE pattern to regex
         const searchTerm = pattern.replace(/%/g, '');
-        return mockDbData.folders.filter(f => 
+        return mockDbData.folders.filter(f =>
           f.name.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
@@ -241,6 +262,77 @@ const createMockDatabase = () => ({
       return mockDbData.folder_bookmarks
         .filter(fb => fb.bookmarkId === params[0])
         .map(fb => ({ folderId: fb.folderId }));
+    }
+    // BOOKMARK SEARCH IN FOLDER with folderId IN (searchInFolder recursive: multiple folder IDs + 3x pattern)
+    if (sql.includes("FROM bookmarks b") && sql.includes("folder_bookmarks fb") && sql.includes("folderId IN (") && params && params.length >= 4) {
+      const numFolderIds = params.length - 3;
+      const folderIds = params.slice(0, numFolderIds);
+      const pattern = params[numFolderIds];
+      const searchTerm = pattern ? pattern.replace(/%/g, '').toLowerCase() : '';
+      const bookmarkIdsInFolders = new Set(
+        mockDbData.folder_bookmarks
+          .filter(fb => folderIds.includes(fb.folderId))
+          .map(fb => fb.bookmarkId)
+      );
+      const bookmarksInFolders = mockDbData.bookmarks.filter(b => bookmarkIdsInFolders.has(b.id));
+      if (!searchTerm) return bookmarksInFolders;
+      const nameOrUrlMatch = bookmarksInFolders.filter(b =>
+        (b.name && b.name.toLowerCase().includes(searchTerm)) ||
+        (b.url && b.url.toLowerCase().includes(searchTerm))
+      );
+      const tagMatchBookmarkIds = new Set();
+      mockDbData.bookmark_tags.forEach(bt => {
+        if (!bookmarkIdsInFolders.has(bt.bookmarkId)) return;
+        const tag = mockDbData.tags.find(t => t.id === bt.tagId);
+        if (tag && tag.name && tag.name.toLowerCase().includes(searchTerm)) {
+          tagMatchBookmarkIds.add(bt.bookmarkId);
+        }
+      });
+      const tagMatchBookmarks = mockDbData.bookmarks.filter(b => tagMatchBookmarkIds.has(b.id));
+      const seen = new Set();
+      const combined = [];
+      for (const b of [...nameOrUrlMatch, ...tagMatchBookmarks]) {
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          combined.push(b);
+        }
+      }
+      return combined;
+    }
+    // BOOKMARK SEARCH IN FOLDER (searchInFolder LIKE fallback: single folderId + 3x pattern)
+    if (sql.includes("FROM bookmarks b") && sql.includes("folder_bookmarks fb") && sql.includes("b.name LIKE") && !sql.includes("folderId IN (") && params && params.length >= 4) {
+      const folderId = params[0];
+      const pattern = params[1];
+      const searchTerm = pattern ? pattern.replace(/%/g, '').toLowerCase() : '';
+      const bookmarkIdsInFolder = new Set(
+        mockDbData.folder_bookmarks
+          .filter(fb => fb.folderId === folderId)
+          .map(fb => fb.bookmarkId)
+      );
+      const bookmarksInFolder = mockDbData.bookmarks.filter(b => bookmarkIdsInFolder.has(b.id));
+      if (!searchTerm) return bookmarksInFolder;
+      const nameOrUrlMatch = bookmarksInFolder.filter(b =>
+        (b.name && b.name.toLowerCase().includes(searchTerm)) ||
+        (b.url && b.url.toLowerCase().includes(searchTerm))
+      );
+      const tagMatchBookmarkIds = new Set();
+      mockDbData.bookmark_tags.forEach(bt => {
+        if (!bookmarkIdsInFolder.has(bt.bookmarkId)) return;
+        const tag = mockDbData.tags.find(t => t.id === bt.tagId);
+        if (tag && tag.name && tag.name.toLowerCase().includes(searchTerm)) {
+          tagMatchBookmarkIds.add(bt.bookmarkId);
+        }
+      });
+      const tagMatchBookmarks = mockDbData.bookmarks.filter(b => tagMatchBookmarkIds.has(b.id));
+      const seen = new Set();
+      const combined = [];
+      for (const b of [...nameOrUrlMatch, ...tagMatchBookmarks]) {
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          combined.push(b);
+        }
+      }
+      return combined;
     }
     // countFolderContents: SELECT DISTINCT b.id ... WHERE fb.folderId = ?
     if (sql.includes("folder_bookmarks") && sql.includes("bookmarks b") && params && params.length === 1) {
@@ -274,16 +366,16 @@ const createMockDatabase = () => ({
         .filter(fb => fb.bookmarkId === bookmarkId && !folderIds.includes(fb.folderId))
         .map(fb => ({ folderId: fb.folderId }));
     }
-    // BOOKMARK BY FOLDER
-    if (sql.includes("FROM bookmarks b") && sql.includes("folder_bookmarks fb")) {
-      const folderId = params?.[0];
+    // BOOKMARK BY FOLDER (getByFolder: single param folderId)
+    if (sql.includes("FROM bookmarks b") && sql.includes("folder_bookmarks fb") && params && params.length === 1) {
+      const folderId = params[0];
       const bookmarkIds = mockDbData.folder_bookmarks
         .filter(fb => fb.folderId === folderId)
         .map(fb => fb.bookmarkId);
       return mockDbData.bookmarks.filter(b => bookmarkIds.includes(b.id));
     }
-    // BOOKMARK SEARCH with LIKE
-    if (sql.includes("FROM bookmarks") && sql.includes("LIKE")) {
+    // BOOKMARK SEARCH with LIKE (global search only; scoped search has folder_bookmarks)
+    if (sql.includes("FROM bookmarks") && sql.includes("LIKE") && !sql.includes("folder_bookmarks")) {
       const pattern = params?.[0];
       if (pattern) {
         const searchTerm = pattern.replace(/%/g, '');

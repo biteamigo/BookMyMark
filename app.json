@@ -21,13 +21,19 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.biteamigo.BookMyMark"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5e6a89db-a60a-40b1-958a-29b2363b2f4c"
+      }
+    }
   }
 }

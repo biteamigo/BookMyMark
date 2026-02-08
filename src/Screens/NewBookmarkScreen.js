@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -37,6 +37,7 @@ const NewBookmarkScreen = ({ navigation, route }) => {
   const [tags, setTags] = useState([]);
   const [errors, setErrors] = useState({});
   const [allTags, setAllTags] = useState([]);
+  const savedSuccessfullyRef = useRef(false);
 
   useEffect(() => {
     // Load existing tags for autocomplete
@@ -162,22 +163,27 @@ const NewBookmarkScreen = ({ navigation, route }) => {
       tagRepository.setTagsForBookmark(bookmark.id, tags);
     }
 
-    // Navigate back
+    // Signal that we're leaving after save so usePreventRemove won't show "Discard Changes"
+    savedSuccessfullyRef.current = true;
     navigation.goBack();
   };
 
-  // Prevent going back with unsaved changes
+  // Prevent going back with unsaved changes (unless we just saved)
   const hasUnsavedChanges = Boolean(name || url || tags.length > 0);
-  
+
   usePreventRemove(hasUnsavedChanges, ({ data }) => {
+    if (savedSuccessfullyRef.current) {
+      navigation.dispatch(data.action);
+      return;
+    }
     Alert.alert(
       'Discard Changes?',
       'You have unsaved changes. Are you sure you want to go back?',
       [
         { text: 'Keep Editing', style: 'cancel', onPress: () => {} },
-        { 
-          text: 'Discard', 
-          style: 'destructive', 
+        {
+          text: 'Discard',
+          style: 'destructive',
           onPress: () => navigation.dispatch(data.action)
         }
       ]

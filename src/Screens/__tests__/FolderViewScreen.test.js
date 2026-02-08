@@ -192,6 +192,85 @@ describe("FolderViewScreen", () => {
 
       expect(searchInput.props.value).toBe("");
     });
+
+    it("shows no-results message when search has no matches", async () => {
+      jest.useFakeTimers();
+      renderWithProviders();
+
+      const searchInput = screen.getByPlaceholderText("Search");
+      fireEvent.changeText(searchInput, "xyznonexistent");
+
+      await act(async () => {
+        jest.advanceTimersByTime(250);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("No folders or bookmarks match")).toBeOnTheScreen();
+      });
+
+      jest.useRealTimers();
+    });
+
+    it("shows full list again when search is cleared", async () => {
+      jest.useFakeTimers();
+      renderWithProviders();
+
+      const searchInput = screen.getByPlaceholderText("Search");
+      fireEvent.changeText(searchInput, "xyznonexistent");
+      await act(async () => {
+        jest.advanceTimersByTime(250);
+      });
+      await waitFor(() => {
+        expect(screen.getByText("No folders or bookmarks match")).toBeOnTheScreen();
+      });
+
+      fireEvent.changeText(searchInput, "");
+      await act(async () => {
+        jest.advanceTimersByTime(250);
+      });
+
+      expect(screen.queryByText("No folders or bookmarks match")).toBeNull();
+
+      jest.useRealTimers();
+    });
+
+    it("scopes search to current folder (root)", async () => {
+      jest.useFakeTimers();
+      renderWithProviders({ route: { params: {} } });
+
+      const searchInput = screen.getByPlaceholderText("Search");
+      fireEvent.changeText(searchInput, "test");
+      await act(async () => {
+        jest.advanceTimersByTime(250);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText("Search")).toBeOnTheScreen();
+      });
+      expect(screen.getByText("No folders or bookmarks match")).toBeOnTheScreen();
+
+      jest.useRealTimers();
+    });
+
+    it("scopes search to current folder (subfolder)", async () => {
+      jest.useFakeTimers();
+      renderWithProviders({
+        route: { params: { folderId: "subfolder-id" } }
+      });
+
+      const searchInput = screen.getByPlaceholderText("Search");
+      fireEvent.changeText(searchInput, "query");
+      await act(async () => {
+        jest.advanceTimersByTime(250);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("No folders or bookmarks match")).toBeOnTheScreen();
+      });
+
+      jest.useRealTimers();
+    });
+
   });
 
   describe("Bottom action bar", () => {

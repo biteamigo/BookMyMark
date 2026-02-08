@@ -2,6 +2,7 @@
  * Repository for bookmark CRUD operations
  */
 import { generateId, now } from "../seed";
+import { normalizeSearchQuery, escapeFtsQuery, likePattern } from "../../Utils/searchUtils";
 
 /**
  * @typedef {Object} Bookmark
@@ -280,14 +281,13 @@ export class BookmarkRepository {
    * @returns {Bookmark[]}
    */
   searchAll(query) {
-    if (!query || query.trim() === '') {
+    const normalized = normalizeSearchQuery(query);
+    if (normalized === '') {
       return [];
     }
-
-    const ftsQuery = query.trim().replace(/[:"*]/g, ' ') + '*';
-    
+    const ftsQuery = escapeFtsQuery(normalized);
+    const like = likePattern(normalized);
     try {
-      // Search bookmarks using FTS5
       const bookmarkResults = this.db.getAllSync(
         `SELECT b.* FROM bookmarks b
          INNER JOIN bookmarks_fts fts ON b.id = fts.id
@@ -295,31 +295,24 @@ export class BookmarkRepository {
          ORDER BY rank, b.createdAt DESC`,
         [ftsQuery]
       );
-
-      // Also search by tags (tags are typically small, LIKE is fine)
       const tagResults = this.db.getAllSync(
         `SELECT DISTINCT b.* FROM bookmarks b
          INNER JOIN bookmark_tags bt ON b.id = bt.bookmarkId
          INNER JOIN tags t ON bt.tagId = t.id
          WHERE t.name LIKE ?
          ORDER BY b.createdAt DESC`,
-        [`%${query}%`]
+        [like]
       );
-
-      // Merge and deduplicate results by id
       const seen = new Set();
       const combined = [];
-      
       for (const bookmark of [...bookmarkResults, ...tagResults]) {
         if (!seen.has(bookmark.id)) {
           seen.add(bookmark.id);
           combined.push(bookmark);
         }
       }
-      
       return combined;
     } catch (error) {
-      // Fallback to LIKE if FTS query fails
       console.warn('FTS searchAll failed, falling back to LIKE:', error.message);
       return this.db.getAllSync(
         `SELECT DISTINCT b.* FROM bookmarks b
@@ -327,7 +320,66 @@ export class BookmarkRepository {
          LEFT JOIN tags t ON bt.tagId = t.id
          WHERE b.name LIKE ? OR b.url LIKE ? OR t.name LIKE ?
          ORDER BY b.createdAt DESC`,
-        [`%${query}%`, `%${query}%`, `%${query}%`]
+        [like, like, like]
+      );
+    }
+  }
+
+  /**
+   * Search bookmarks by name, URL, or tag within one or more folders (e.g. current folder + all descendants).
+   * @param {string} query - Search query
+   * @param {string|string[]} folderIdOrIds - Single folder ID or array of folder IDs to search in
+   * @returns {Bookmark[]}
+   */
+  searchInFolder(query, folderIdOrIds) {
+    const normalized = normalizeSearchQuery(query);
+    if (normalized === '') {
+      return [];
+    }
+    const folderIds = Array.isArray(folderIdOrIds) ? folderIdOrIds : [folderIdOrIds];
+    if (folderIds.length === 0) {
+      return [];
+    }
+    const ftsQuery = escapeFtsQuery(normalized);
+    const like = likePattern(normalized);
+    const inPlaceholders = folderIds.map(() => '?').join(',');
+    try {
+      const bookmarkResults = this.db.getAllSync(
+        `SELECT b.* FROM bookmarks b
+         INNER JOIN folder_bookmarks fb ON b.id = fb.bookmarkId AND fb.folderId IN (${inPlaceholders})
+         INNER JOIN bookmarks_fts fts ON b.id = fts.id
+         WHERE bookmarks_fts MATCH ?
+         ORDER BY rank, b.createdAt DESC`,
+        [...folderIds, ftsQuery]
+      );
+      const tagResults = this.db.getAllSync(
+        `SELECT DISTINCT b.* FROM bookmarks b
+         INNER JOIN folder_bookmarks fb ON b.id = fb.bookmarkId AND fb.folderId IN (${inPlaceholders})
+         INNER JOIN bookmark_tags bt ON b.id = bt.bookmarkId
+         INNER JOIN tags t ON bt.tagId = t.id
+         WHERE t.name LIKE ?
+         ORDER BY b.createdAt DESC`,
+        [...folderIds, like]
+      );
+      const seen = new Set();
+      const combined = [];
+      for (const bookmark of [...bookmarkResults, ...tagResults]) {
+        if (!seen.has(bookmark.id)) {
+          seen.add(bookmark.id);
+          combined.push(bookmark);
+        }
+      }
+      return combined;
+    } catch (error) {
+      console.warn('FTS searchInFolder failed, falling back to LIKE:', error.message);
+      return this.db.getAllSync(
+        `SELECT DISTINCT b.* FROM bookmarks b
+         INNER JOIN folder_bookmarks fb ON b.id = fb.bookmarkId AND fb.folderId IN (${inPlaceholders})
+         LEFT JOIN bookmark_tags bt ON b.id = bt.bookmarkId
+         LEFT JOIN tags t ON bt.tagId = t.id
+         WHERE b.name LIKE ? OR b.url LIKE ? OR t.name LIKE ?
+         ORDER BY b.createdAt DESC`,
+        [...folderIds, like, like, like]
       );
     }
   }

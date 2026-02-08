@@ -2,6 +2,7 @@
  * Repository for folder CRUD operations
  */
 import { generateId, now } from "../seed";
+import { normalizeSearchQuery, escapeFtsQuery, likePattern } from "../../Utils/searchUtils";
 
 /**
  * @typedef {Object} Folder
@@ -173,13 +174,12 @@ export class FolderRepository {
    * @returns {Folder[]}
    */
   search(query) {
-    if (!query || query.trim() === '') {
+    const normalized = normalizeSearchQuery(query);
+    if (normalized === '') {
       return [];
     }
-
-    // Escape FTS5 special characters and add prefix wildcard for substring matching
-    const ftsQuery = query.trim().replace(/[:"*]/g, ' ') + '*';
-    
+    const ftsQuery = escapeFtsQuery(normalized);
+    const like = likePattern(normalized);
     try {
       return this.db.getAllSync(
         `SELECT f.* FROM folders f
@@ -189,11 +189,69 @@ export class FolderRepository {
         [ftsQuery]
       );
     } catch (error) {
-      // Fallback to LIKE if FTS query fails
       console.warn('FTS search failed, falling back to LIKE:', error.message);
       return this.db.getAllSync(
         "SELECT * FROM folders WHERE name LIKE ? ORDER BY name ASC",
-        [`%${query}%`]
+        [like]
+      );
+    }
+  }
+
+  /**
+   * Search folders by name within the current folder scope (recursive).
+   * - parentId === null: search root folders only.
+   * - parentId set: search all descendant folders (direct and nested) of that folder.
+   * @param {string} query - Search query
+   * @param {string|null} parentId - null = root folders only; string = all descendants of this folder
+   * @returns {Folder[]}
+   */
+  searchInFolder(query, parentId) {
+    const normalized = normalizeSearchQuery(query);
+    if (normalized === '') {
+      return [];
+    }
+    const ftsQuery = escapeFtsQuery(normalized);
+    const like = likePattern(normalized);
+    try {
+      if (parentId === null || parentId === undefined) {
+        return this.db.getAllSync(
+          `SELECT f.* FROM folders f
+           INNER JOIN folders_fts fts ON f.id = fts.id
+           WHERE folders_fts MATCH ? AND f.parentId IS NULL
+           ORDER BY rank, f.name ASC`,
+          [ftsQuery]
+        );
+      }
+      const descendantIds = this.getAllDescendantIds(parentId);
+      const folderIdsToSearch = descendantIds.filter(id => id !== parentId);
+      if (folderIdsToSearch.length === 0) {
+        return [];
+      }
+      const placeholders = folderIdsToSearch.map(() => '?').join(',');
+      return this.db.getAllSync(
+        `SELECT f.* FROM folders f
+         INNER JOIN folders_fts fts ON f.id = fts.id
+         WHERE folders_fts MATCH ? AND f.id IN (${placeholders})
+         ORDER BY rank, f.name ASC`,
+        [ftsQuery, ...folderIdsToSearch]
+      );
+    } catch (error) {
+      console.warn('FTS search failed, falling back to LIKE:', error.message);
+      if (parentId === null || parentId === undefined) {
+        return this.db.getAllSync(
+          "SELECT * FROM folders WHERE name LIKE ? AND parentId IS NULL ORDER BY name ASC",
+          [like]
+        );
+      }
+      const descendantIds = this.getAllDescendantIds(parentId);
+      const folderIdsToSearch = descendantIds.filter(id => id !== parentId);
+      if (folderIdsToSearch.length === 0) {
+        return [];
+      }
+      const placeholders = folderIdsToSearch.map(() => '?').join(',');
+      return this.db.getAllSync(
+        `SELECT * FROM folders WHERE name LIKE ? AND id IN (${placeholders}) ORDER BY name ASC`,
+        [like, ...folderIdsToSearch]
       );
     }
   }

@@ -7,10 +7,13 @@ import { getDatabase } from '../../database/Database';
 
 jest.spyOn(Alert, 'alert');
 
-// Mock usePreventRemove hook
+// Mock usePreventRemove hook - capture callback so tests can simulate "back" and verify no Discard alert after save
+let capturedPreventRemoveCallback;
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
-  usePreventRemove: jest.fn(),
+  usePreventRemove: jest.fn((enabled, callback) => {
+    capturedPreventRemoveCallback = callback;
+  }),
 }));
 
 let mockSetOptions;
@@ -45,6 +48,7 @@ describe('NewBookmarkScreen', () => {
     jest.clearAllMocks();
     Alert.alert.mockClear();
     savedHeaderOptions = null;
+    capturedPreventRemoveCallback = null;
     
     // Create a test folder
     const db = getDatabase();
@@ -281,6 +285,54 @@ describe('NewBookmarkScreen', () => {
     
     expect(reactBookmark).toBeTruthy();
     expect(reactBookmark.url).toBe('https://react.dev');
+  });
+
+  it('does not show Discard Changes alert when going back after successful save', async () => {
+    renderWithProviders({ params: { currentFolderId: folderId } });
+
+    const nameInput = screen.getByTestId('name-input');
+    const urlInput = screen.getByTestId('url-input');
+
+    fireEvent.changeText(nameInput, 'Saved Bookmark');
+    fireEvent.changeText(urlInput, 'https://saved-after-test.com');
+
+    await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+    const HeaderRight = savedHeaderOptions.headerRight();
+    const { getByText: getHeaderText } = render(HeaderRight);
+    const saveButton = getHeaderText('Save');
+
+    Alert.alert.mockClear();
+    fireEvent.press(saveButton);
+
+    await waitFor(() => {
+      expect(mockNavigation.goBack).toHaveBeenCalled();
+    }, { timeout: 3000 });
+
+    // Simulate the preventRemove callback firing (as it would when navigator processes goBack)
+    expect(capturedPreventRemoveCallback).toBeTruthy();
+    capturedPreventRemoveCallback({ data: { action: { type: 'GO_BACK' } } });
+
+    // Should not have shown "Discard Changes?" because we saved successfully
+    const discardCalls = Alert.alert.mock.calls.filter(call => call[0] === 'Discard Changes?');
+    expect(discardCalls).toHaveLength(0);
+  });
+
+  it('shows Discard Changes alert when preventRemove fires with unsaved changes and user has not saved', () => {
+    renderWithProviders({ params: { currentFolderId: folderId } });
+
+    const nameInput = screen.getByTestId('name-input');
+    fireEvent.changeText(nameInput, 'Unsaved name');
+    fireEvent.changeText(screen.getByTestId('url-input'), 'https://unsaved.com');
+
+    expect(capturedPreventRemoveCallback).toBeTruthy();
+    Alert.alert.mockClear();
+    capturedPreventRemoveCallback({ data: { action: { type: 'GO_BACK' } } });
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Discard Changes?',
+      'You have unsaved changes. Are you sure you want to go back?',
+      expect.any(Array)
+    );
   });
 
   it('shows confirmation when canceling with unsaved changes', () => {

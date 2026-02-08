@@ -2,7 +2,7 @@
  * Database initialization and management
  */
 import * as SQLite from "expo-sqlite";
-import { CREATE_TABLES_SQL, DROP_TABLES_SQL, DATABASE_NAME } from "./schema";
+import { CREATE_TABLES_SQL, DROP_TABLES_SQL, FIX_FTS_DELETE_TRIGGERS_SQL, DATABASE_NAME } from "./schema";
 import { seedDatabase } from "./seed";
 
 let dbInstance = null;
@@ -29,17 +29,20 @@ const initializeDatabase = (db) => {
   
   // Create tables
   db.execSync(CREATE_TABLES_SQL);
-  
+
+  // Fix FTS5 DELETE triggers (correct 'delete' command so content table stays in sync)
+  try {
+    db.execSync(FIX_FTS_DELETE_TRIGGERS_SQL);
+  } catch (e) {
+    console.warn("FTS trigger fix skipped (tables may not exist yet):", e?.message);
+  }
+
   // Seed initial data if needed
   seedDatabase(db);
-  
-  // Rebuild FTS indexes only if there's data (triggers will handle new inserts)
-  // This avoids errors on fresh databases
-  const folderCount = db.getFirstSync("SELECT COUNT(*) as count FROM folders");
-  if (folderCount && folderCount.count > 0) {
-    rebuildFTSIndexes(db);
-  }
-  
+
+  // Rebuild FTS indexes on every launch so they stay in sync with content tables (fixes "missing row" errors)
+  rebuildFTSIndexes(db);
+
   console.log("Database initialized successfully");
 };
 
@@ -122,38 +125,21 @@ const ftsTablesExist = (db) => {
 };
 
 /**
- * Rebuild FTS indexes from existing data
- * This syncs the FTS virtual tables with the actual data tables
+ * Rebuild FTS indexes from content tables (fixes "missing row from content table" errors).
+ * Uses FTS5 'rebuild' command so the index is recreated from current folders/bookmarks.
  * @param {SQLite.SQLiteDatabase} db
  */
 export const rebuildFTSIndexes = (db) => {
   try {
-    // Check if FTS tables exist first
     if (!ftsTablesExist(db)) {
-      console.log("FTS tables not found, skipping rebuild");
       return;
     }
 
-    // Clear existing FTS data
-    db.execSync("DELETE FROM folders_fts;");
-    db.execSync("DELETE FROM bookmarks_fts;");
-    
-    // Rebuild folders FTS index
-    db.execSync(`
-      INSERT INTO folders_fts(rowid, id, name)
-      SELECT rowid, id, name FROM folders;
-    `);
-    
-    // Rebuild bookmarks FTS index
-    db.execSync(`
-      INSERT INTO bookmarks_fts(rowid, id, name, url)
-      SELECT rowid, id, name, url FROM bookmarks;
-    `);
-    
-    console.log("FTS indexes rebuilt successfully");
+    // FTS5 'rebuild' re-syncs the index from the content table (correct for content= tables)
+    db.execSync("INSERT INTO folders_fts(folders_fts) VALUES('rebuild');");
+    db.execSync("INSERT INTO bookmarks_fts(bookmarks_fts) VALUES('rebuild');");
   } catch (error) {
     console.error("Error rebuilding FTS indexes:", error);
-    // Non-fatal - continue anyway
   }
 };
 

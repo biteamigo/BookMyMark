@@ -233,6 +233,69 @@ describe('BookmarkRepository', () => {
     });
   });
 
+  describe('searchInFolder', () => {
+    it('returns empty for empty or whitespace query', () => {
+      bookmarkRepo.create({ name: 'Some', url: 'https://some.com' }, [folderId]);
+      expect(bookmarkRepo.searchInFolder('', folderId)).toEqual([]);
+      expect(bookmarkRepo.searchInFolder('   ', folderId)).toEqual([]);
+    });
+
+    it('returns bookmarks in folder matching name', () => {
+      bookmarkRepo.create({ name: 'React Guide', url: 'https://react.dev' }, [folderId]);
+      bookmarkRepo.create({ name: 'Vue Guide', url: 'https://vuejs.org' }, [folderId]);
+      const results = bookmarkRepo.searchInFolder('React', folderId);
+      expect(results.length).toBe(1);
+      expect(results[0].name).toBe('React Guide');
+    });
+
+    it('returns bookmarks in folder matching URL', () => {
+      bookmarkRepo.create({ name: 'Site', url: 'https://example.com/page' }, [folderId]);
+      const results = bookmarkRepo.searchInFolder('example', folderId);
+      expect(results.length).toBe(1);
+      expect(results[0].url).toContain('example');
+    });
+
+    it('returns bookmarks in folder matching tag', () => {
+      const tagRepo = new TagRepository(db);
+      const b = bookmarkRepo.create({ name: 'Tagged', url: 'https://tagged.com' }, [folderId]);
+      tagRepo.setTagsForBookmark(b.id, ['javascript', 'tutorial']);
+      const results = bookmarkRepo.searchInFolder('tutorial', folderId);
+      expect(results.length).toBe(1);
+      expect(results[0].id).toBe(b.id);
+    });
+
+    it('returns only bookmarks in the given folder', () => {
+      const otherFolderId = 'other-folder';
+      db.runSync('INSERT INTO folders (id, name, parentId, icon, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [otherFolderId, 'Other', null, 'folder', Date.now(), Date.now()]);
+      bookmarkRepo.create({ name: 'MatchInFolder', url: 'https://a.com' }, [folderId]);
+      bookmarkRepo.create({ name: 'MatchInOther', url: 'https://b.com' }, [otherFolderId]);
+      const results = bookmarkRepo.searchInFolder('Match', folderId);
+      expect(results.length).toBe(1);
+      expect(results[0].name).toBe('MatchInFolder');
+    });
+
+    it('returns empty when no bookmarks in folder match', () => {
+      bookmarkRepo.create({ name: 'Other', url: 'https://other.com' }, [folderId]);
+      const results = bookmarkRepo.searchInFolder('NonExistent', folderId);
+      expect(results).toEqual([]);
+    });
+
+    it('accepts array of folder IDs and returns bookmarks from any of them', () => {
+      const folderA = 'folder-a';
+      const folderB = 'folder-b';
+      db.runSync('INSERT INTO folders (id, name, parentId, icon, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [folderA, 'Folder A', null, 'folder', Date.now(), Date.now()]);
+      db.runSync('INSERT INTO folders (id, name, parentId, icon, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
+        [folderB, 'Folder B', null, 'folder', Date.now(), Date.now()]);
+      bookmarkRepo.create({ name: 'In A', url: 'https://a.com' }, [folderA]);
+      bookmarkRepo.create({ name: 'In B', url: 'https://b.com' }, [folderB]);
+      const results = bookmarkRepo.searchInFolder('In', [folderA, folderB]);
+      expect(results.length).toBe(2);
+      expect(results.map(b => b.name).sort()).toEqual(['In A', 'In B']);
+    });
+  });
+
   describe('searchByTag', () => {
     it('searches bookmarks by tag name', () => {
       const results = bookmarkRepo.searchByTag('test');

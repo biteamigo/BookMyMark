@@ -126,6 +126,43 @@ describe('FolderRepository', () => {
     });
   });
 
+  describe('searchInFolder', () => {
+    it('returns empty for empty or whitespace query', () => {
+      const parent = folderRepo.create({ name: 'Parent', icon: 'folder' });
+      expect(folderRepo.searchInFolder('', parent.id)).toEqual([]);
+      expect(folderRepo.searchInFolder('   ', null)).toEqual([]);
+    });
+
+    it('searches root folders only when parentId is null', () => {
+      folderRepo.create({ name: 'RootMatch', icon: 'folder' });
+      const parent = folderRepo.create({ name: 'Parent', icon: 'folder' });
+      folderRepo.create({ name: 'ChildMatch', icon: 'folder', parentId: parent.id });
+      const results = folderRepo.searchInFolder('Match', null);
+      expect(results.every(f => f.parentId == null)).toBe(true);
+      expect(results.some(f => f.name === 'RootMatch')).toBe(true);
+      expect(results.some(f => f.name === 'ChildMatch')).toBe(false);
+    });
+
+    it('searches all descendant folders recursively when parentId is set', () => {
+      const parent = folderRepo.create({ name: 'Parent', icon: 'folder' });
+      const sub = folderRepo.create({ name: 'SubMatch', icon: 'folder', parentId: parent.id });
+      const nested = folderRepo.create({ name: 'NestedMatch', icon: 'folder', parentId: sub.id });
+      const otherParent = folderRepo.create({ name: 'Other', icon: 'folder' });
+      folderRepo.create({ name: 'OtherSubMatch', icon: 'folder', parentId: otherParent.id });
+      const results = folderRepo.searchInFolder('Match', parent.id);
+      expect(results.length).toBe(2);
+      expect(results.map(f => f.name).sort()).toEqual(['NestedMatch', 'SubMatch']);
+      expect(results.every(f => f.id !== parent.id)).toBe(true);
+    });
+
+    it('returns empty when no folders match in scope', () => {
+      const parent = folderRepo.create({ name: 'Parent', icon: 'folder' });
+      folderRepo.create({ name: 'SubFolder', icon: 'folder', parentId: parent.id });
+      const results = folderRepo.searchInFolder('NonExistent', parent.id);
+      expect(results).toEqual([]);
+    });
+  });
+
   describe('nameExists', () => {
     it('returns true for existing name', () => {
       folderRepo.create({ name: 'ExistingFolder', icon: 'folder' });

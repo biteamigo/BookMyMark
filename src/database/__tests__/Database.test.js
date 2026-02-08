@@ -131,20 +131,14 @@ describe('Database', () => {
       expect(() => rebuildFTSIndexes(db)).not.toThrow();
     });
 
-    it('logs when FTS tables not found', () => {
-      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-      
-      // Create a db-like object with no FTS tables
+    it('skips rebuild when FTS tables not found', () => {
       const mockDb = {
         getFirstSync: jest.fn(() => ({ count: 0 })),
         execSync: jest.fn(),
       };
-      
-      rebuildFTSIndexes(mockDb);
-      
-      expect(consoleLogSpy).toHaveBeenCalledWith('FTS tables not found, skipping rebuild');
-      
-      consoleLogSpy.mockRestore();
+
+      expect(() => rebuildFTSIndexes(mockDb)).not.toThrow();
+      expect(mockDb.execSync).not.toHaveBeenCalled();
     });
 
     it('handles rebuild errors gracefully', () => {

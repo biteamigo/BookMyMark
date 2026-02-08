@@ -22,6 +22,7 @@ import BottomActionBar from "../Components/BottomActionBar";
 import { getIconForUrl } from "../Utils/IconMapper";
 import Toast from "../Components/Toast";
 import { executeTransaction } from "../database/Database";
+import { useDebouncedValue } from "../Utils/useDebouncedValue";
 
 const FolderViewScreen = ({ navigation, route }) => {
   // Get folderId from route params (null = root level)
@@ -29,6 +30,7 @@ const FolderViewScreen = ({ navigation, route }) => {
   const isRoot = currentFolderId === null;
   
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 250);
   const { folderRepository, bookmarkRepository } = useDatabase();
   const { editingFolderId, updateFolderName } = useFolders();
   
@@ -66,34 +68,42 @@ const FolderViewScreen = ({ navigation, route }) => {
     }
   }, [currentFolderId, isRoot, folderRepository, navigation]);
 
-  // Load folders and bookmarks for current level
-  const loadItems = () => {
-    const folders = currentFolderId
-      ? folderRepository.getSubfolders(currentFolderId)
-      : folderRepository.getRootFolders();
-    
-    const bookmarks = currentFolderId
-      ? bookmarkRepository.getByFolder(currentFolderId)
-      : []; // No bookmarks at root for now
-    
-    // Combine and sort: folders first, then bookmarks
-    const combined = [
-      ...folders.map(f => ({ ...f, type: 'folder' })),
-      ...bookmarks.map(b => ({ ...b, type: 'bookmark' }))
-    ];
-    
-    setItems(combined);
-  };
+  // Single source: load full list or search results based on debounced search term
+  const refreshItems = useCallback(() => {
+    if (debouncedSearchTerm.trim() === '') {
+      const folders = currentFolderId
+        ? folderRepository.getSubfolders(currentFolderId)
+        : folderRepository.getRootFolders();
+      const bookmarks = currentFolderId
+        ? bookmarkRepository.getByFolder(currentFolderId)
+        : [];
+      setItems([
+        ...folders.map(f => ({ ...f, type: 'folder' })),
+        ...bookmarks.map(b => ({ ...b, type: 'bookmark' }))
+      ]);
+    } else {
+      // At root: search all folders and all bookmarks (any subfolder). In a folder: search that folder + descendants.
+      const folders = isRoot
+        ? folderRepository.search(debouncedSearchTerm)
+        : folderRepository.searchInFolder(debouncedSearchTerm, currentFolderId);
+      const bookmarks = isRoot
+        ? bookmarkRepository.searchAll(debouncedSearchTerm)
+        : bookmarkRepository.searchInFolder(debouncedSearchTerm, folderRepository.getAllDescendantIds(currentFolderId));
+      setItems([
+        ...folders.map(f => ({ ...f, type: 'folder' })),
+        ...bookmarks.map(b => ({ ...b, type: 'bookmark' }))
+      ]);
+    }
+  }, [currentFolderId, debouncedSearchTerm, isRoot, folderRepository, bookmarkRepository]);
 
   useEffect(() => {
-    loadItems();
-  }, [currentFolderId, editingFolderId]);
+    refreshItems();
+  }, [refreshItems, editingFolderId]);
 
-  // Reload items when screen comes into focus (e.g., after creating a bookmark)
   useFocusEffect(
     useCallback(() => {
-      loadItems();
-    }, [currentFolderId])
+      refreshItems();
+    }, [refreshItems])
   );
 
   // When a folder starts being edited, set up the editing state
@@ -135,7 +145,7 @@ const FolderViewScreen = ({ navigation, route }) => {
   const handleSubmitEditing = () => {
     if (editingFolderId) {
       updateFolderName(editingFolderId, editingName.trim() || originalName);
-      loadItems(); // Reload to show updated name
+      refreshItems();
       
       // If we're editing the current folder (shown in header), update the header
       if (editingFolderId === currentFolderId) {
@@ -276,8 +286,7 @@ const FolderViewScreen = ({ navigation, route }) => {
         if (folderIds.includes(currentFolderId)) {
           navigation.goBack();
         } else {
-          // Reload items
-          loadItems();
+          refreshItems();
         }
       });
     } catch (error) {
@@ -446,7 +455,7 @@ const FolderViewScreen = ({ navigation, route }) => {
         ref={flatListRef}
         data={items}
         numColumns={viewMode === 'grid' ? 3 : 1}
-        key={viewMode} // Force re-render on layout change
+        key={viewMode}
         horizontal={false}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
@@ -459,17 +468,20 @@ const FolderViewScreen = ({ navigation, route }) => {
             flatListRef.current?.scrollToEnd({ animated: true });
           }, 200);
         }}
+        ListEmptyComponent={
+          debouncedSearchTerm.trim() !== '' && items.length === 0 ? (
+            <View style={styles.emptySearchContainer}>
+              <Text style={styles.emptySearchText}>No folders or bookmarks match</Text>
+            </View>
+          ) : null
+        }
       />
       
       <View style={styles.searchBarContainer}>
         <SearchBar
           searchTerm={searchTerm}
-          onSearchTermChange={(newSearchTerm) => {
-            setSearchTerm(newSearchTerm);
-          }}
-          onSubmit={() => {
-            console.log("Search:", searchTerm);
-          }}
+          onSearchTermChange={setSearchTerm}
+          onSubmit={() => {}}
         />
       </View>
       
@@ -502,6 +514,15 @@ const styles = StyleSheet.create({
   listContents: {
     paddingTop: 60,
     paddingBottom: 100,
+  },
+  emptySearchContainer: {
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    alignItems: "center",
+  },
+  emptySearchText: {
+    fontSize: 16,
+    color: "#666",
   },
   columnWrapper: {
     justifyContent: "space-around",

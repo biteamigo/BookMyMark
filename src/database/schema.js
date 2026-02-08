@@ -87,8 +87,9 @@ CREATE TRIGGER IF NOT EXISTS folders_au AFTER UPDATE ON folders BEGIN
   UPDATE folders_fts SET name = new.name WHERE id = new.id;
 END;
 
+-- FTS5 external content: must use 'delete' command (not DELETE) to avoid "missing row from content table"
 CREATE TRIGGER IF NOT EXISTS folders_ad AFTER DELETE ON folders BEGIN
-  DELETE FROM folders_fts WHERE id = old.id;
+  INSERT INTO folders_fts(folders_fts, rowid, id, name) VALUES ('delete', old.rowid, old.id, old.name);
 END;
 
 -- Triggers to keep bookmarks_fts synchronized
@@ -100,8 +101,9 @@ CREATE TRIGGER IF NOT EXISTS bookmarks_au AFTER UPDATE ON bookmarks BEGIN
   UPDATE bookmarks_fts SET name = new.name, url = new.url WHERE id = new.id;
 END;
 
+-- FTS5 external content: must use 'delete' command (not DELETE) to avoid "missing row from content table"
 CREATE TRIGGER IF NOT EXISTS bookmarks_ad AFTER DELETE ON bookmarks BEGIN
-  DELETE FROM bookmarks_fts WHERE id = old.id;
+  INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, name, url) VALUES ('delete', old.rowid, old.id, old.name, old.url);
 END;
 
 -- Indexes for performance
@@ -114,6 +116,18 @@ CREATE INDEX IF NOT EXISTS idx_folder_bookmarks_folderId ON folder_bookmarks(fol
 CREATE INDEX IF NOT EXISTS idx_folder_bookmarks_bookmarkId ON folder_bookmarks(bookmarkId);
 CREATE INDEX IF NOT EXISTS idx_bookmark_tags_bookmarkId ON bookmark_tags(bookmarkId);
 CREATE INDEX IF NOT EXISTS idx_bookmark_tags_tagId ON bookmark_tags(tagId);
+`;
+
+/** Recreate FTS5 DELETE triggers with correct 'delete' command (fixes "missing row from content table") */
+export const FIX_FTS_DELETE_TRIGGERS_SQL = `
+DROP TRIGGER IF EXISTS folders_ad;
+DROP TRIGGER IF EXISTS bookmarks_ad;
+CREATE TRIGGER folders_ad AFTER DELETE ON folders BEGIN
+  INSERT INTO folders_fts(folders_fts, rowid, id, name) VALUES ('delete', old.rowid, old.id, old.name);
+END;
+CREATE TRIGGER bookmarks_ad AFTER DELETE ON bookmarks BEGIN
+  INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, name, url) VALUES ('delete', old.rowid, old.id, old.name, old.url);
+END;
 `;
 
 export const DROP_TABLES_SQL = `
