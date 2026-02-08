@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "BookMyMark",
-    "slug": "BookMyMark",
+    "slug": "bookmymark",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,9 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
@@ -27,12 +25,10 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-sqlite"
-    ],
+    "plugins": [],
     "extra": {
       "eas": {
-        "projectId": "5e6a89db-a60a-40b1-958a-29b2363b2f4c"
+        "projectId": "3843cfce-a5f1-4a82-acb1-7a582c6ae60d"
       }
     }
   }
