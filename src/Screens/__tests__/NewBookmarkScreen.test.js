@@ -4,17 +4,35 @@ import { Alert } from 'react-native';
 import NewBookmarkScreen from '../NewBookmarkScreen';
 import { DatabaseProvider } from '../../Context/DatabaseContext';
 import { getDatabase } from '../../database/Database';
+import * as folderPickerResult from '../../Utils/folderPickerResult';
 
 jest.spyOn(Alert, 'alert');
 
+// Mock bridge so we can inject the "returned from FolderPicker" value; component reads it in useFocusEffect.
+jest.mock('../../Utils/folderPickerResult', () => ({
+  getAndClearPendingFolderPickerResult: jest.fn(),
+  setPendingFolderPickerResult: jest.fn(),
+}));
+
 // Mock usePreventRemove hook - capture callback so tests can simulate "back" and verify no Discard alert after save
 let capturedPreventRemoveCallback;
-jest.mock('@react-navigation/native', () => ({
-  ...jest.requireActual('@react-navigation/native'),
-  usePreventRemove: jest.fn((enabled, callback) => {
-    capturedPreventRemoveCallback = callback;
-  }),
-}));
+jest.mock('@react-navigation/native', () => {
+  const React = require('react');
+  const actual = jest.requireActual('@react-navigation/native');
+  return {
+    ...actual,
+    usePreventRemove: jest.fn((enabled, callback) => {
+      capturedPreventRemoveCallback = callback;
+    }),
+    useFocusEffect: jest.fn((callback) => {
+      React.useEffect(() => {
+        const fn = typeof callback === 'function' ? callback : callback();
+        fn();
+        return () => {};
+      }, []);
+    }),
+  };
+});
 
 let mockSetOptions;
 let savedHeaderOptions;
@@ -49,7 +67,7 @@ describe('NewBookmarkScreen', () => {
     Alert.alert.mockClear();
     savedHeaderOptions = null;
     capturedPreventRemoveCallback = null;
-    
+    folderPickerResult.getAndClearPendingFolderPickerResult.mockReturnValue(null);
     // Create a test folder
     const db = getDatabase();
     const { FolderRepository } = require('../../database/repositories');
@@ -252,7 +270,6 @@ describe('NewBookmarkScreen', () => {
     
     expect(mockNavigation.navigate).toHaveBeenCalledWith('FolderPicker', expect.objectContaining({
       selectedFolderIds: expect.any(Array),
-      _onSelect: expect.any(Function),
     }));
   });
 
@@ -575,26 +592,52 @@ describe('NewBookmarkScreen', () => {
     // usePreventRemove hook handles navigation prevention internally
   });
 
-  it('clears folder error when folders are selected via callback', async () => {
+  it('applies folder selection when returning from folder picker (bridge)', async () => {
+    folderPickerResult.getAndClearPendingFolderPickerResult.mockReturnValue([folderId]);
     renderWithProviders();
-
-    // Open folder picker
-    const folderPicker = screen.getByTestId('folder-picker-button');
-    fireEvent.press(folderPicker);
-
-    // Get the callback
-    const navCall = mockNavigation.navigate.mock.calls.find(call => call[0] === 'FolderPicker');
-    const callback = navCall[1]._onSelect;
-
-    // Simulate selecting a folder
-    await act(async () => {
-      callback([folderId]);
-      await new Promise(resolve => setTimeout(resolve, 50));
-    });
-
-    // Verify folder is selected
     await waitFor(() => {
       expect(screen.getByText('Test Folder')).toBeTruthy();
     });
+  });
+
+  it('saves bookmark to all folders selected via folder picker (multi-folder fix)', async () => {
+    const db = getDatabase();
+    const { FolderRepository, BookmarkRepository } = require('../../database/repositories');
+    const folderRepo = new FolderRepository(db);
+    const folderA = folderRepo.create({ name: 'Music', icon: 'folder' });
+    const folderB = folderRepo.create({ name: 'YouTube', icon: 'folder' });
+
+    folderPickerResult.getAndClearPendingFolderPickerResult.mockReturnValue([folderA.id, folderB.id]);
+    renderWithProviders({ params: { currentFolderId: folderA.id } });
+    await waitFor(() => {
+      expect(screen.getByText('2')).toBeTruthy();
+      expect(screen.getByText(/Music.*YouTube|YouTube.*Music/)).toBeTruthy();
+    });
+
+    fireEvent.changeText(screen.getByTestId('name-input'), 'Multi-Folder Bookmark');
+    fireEvent.changeText(screen.getByTestId('url-input'), 'https://multi-folder-test.com');
+
+    await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+    const HeaderRight = savedHeaderOptions.headerRight();
+    const { getByText: getHeaderText } = render(HeaderRight);
+    fireEvent.press(getHeaderText('Save'));
+
+    await waitFor(() => {
+      expect(mockNavigation.goBack).toHaveBeenCalled();
+    }, { timeout: 3000 });
+
+    const bookmarkRepo = new BookmarkRepository(db);
+    const saved = bookmarkRepo.getAll().find(b => b.name === 'Multi-Folder Bookmark');
+    expect(saved).toBeTruthy();
+
+    const folderIds = bookmarkRepo.getFolders(saved.id);
+    expect(folderIds).toHaveLength(2);
+    expect(folderIds).toContain(folderA.id);
+    expect(folderIds).toContain(folderB.id);
+
+    const inMusic = bookmarkRepo.getByFolder(folderA.id);
+    const inYouTube = bookmarkRepo.getByFolder(folderB.id);
+    expect(inMusic.map(b => b.id)).toContain(saved.id);
+    expect(inYouTube.map(b => b.id)).toContain(saved.id);
   });
 });

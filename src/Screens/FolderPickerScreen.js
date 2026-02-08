@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePreventRemove } from '@react-navigation/native';
 import SearchBar from '../Components/SearchBar';
+import { setPendingFolderPickerResult } from '../Utils/folderPickerResult';
 import { useDatabase } from '../Context/DatabaseContext';
 import globalStyles from '../CSS/GlobalCss';
 
@@ -27,11 +28,11 @@ import globalStyles from '../CSS/GlobalCss';
  */
 const FolderPickerScreen = ({ navigation, route }) => {
   const { folderRepository } = useDatabase();
-  const { selectedFolderIds = [], _onSelect } = route.params || {};
+  const { selectedFolderIds = [] } = route.params || {};
   
   const [folders, setFolders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedIds, setSelectedIds] = useState(new Set(selectedFolderIds));
+  const [selectedIds, setSelectedIds] = useState(() => new Set(selectedFolderIds));
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderParentId, setNewFolderParentId] = useState(null);
@@ -41,6 +42,18 @@ const FolderPickerScreen = ({ navigation, route }) => {
   const [parentPickerExpandedIds, setParentPickerExpandedIds] = useState(new Set());
   const selectedCountOpacity = useRef(new Animated.Value(0)).current;
   const selectedCountHeight = useRef(new Animated.Value(0)).current;
+  const selectedIdsRef = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+
+  // When opening the picker again (or params change), sync local selection from params so the modal
+  // reflects the parent's current selection. Use serialized ids so we only sync when selection changes.
+  const selectedFolderIdsKey = JSON.stringify(route.params?.selectedFolderIds ?? []);
+  React.useEffect(() => {
+    const ids = route.params?.selectedFolderIds;
+    if (ids && Array.isArray(ids)) {
+      setSelectedIds(new Set(ids));
+    }
+  }, [selectedFolderIdsKey]);
 
   const hasChanges = selectedIds.size !== selectedFolderIds.length || 
     ![...selectedIds].every(id => selectedFolderIds.includes(id));
@@ -391,12 +404,13 @@ const FolderPickerScreen = ({ navigation, route }) => {
     return rootFolders.map(folder => renderFolder(folder.id, 0));
   };
 
-  const handleDone = () => {
-    if (_onSelect) {
-      _onSelect(Array.from(selectedIds));
-    }
+  const handleDone = React.useCallback(() => {
+    const ids = Array.from(selectedIdsRef.current);
+    console.log('[FolderPicker] Done pressed', 'count:', ids.length, 'ids:', ids);
+    setPendingFolderPickerResult(ids);
+    console.log('[FolderPicker] goBack() called');
     navigation.goBack();
-  };
+  }, [navigation]);
 
   const getFolderPath = (folder) => {
     if (!folder.parentId) return folder.name;

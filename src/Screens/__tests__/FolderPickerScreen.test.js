@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-
 import FolderPickerScreen from '../FolderPickerScreen';
 import { DatabaseProvider } from '../../Context/DatabaseContext';
 import { getDatabase } from '../../database/Database';
+import { getAndClearPendingFolderPickerResult } from '../../Utils/folderPickerResult';
 
 // Mock usePreventRemove hook
 jest.mock('@react-navigation/native', () => ({
@@ -203,13 +204,17 @@ describe('FolderPickerScreen', () => {
     });
   });
 
-  it('calls onSelect with selected folder IDs when Done is pressed', async () => {
-    const mockOnSelect = jest.fn();
-    
+  it('writes selection to bridge and goes back when Done is pressed', async () => {
+    const db = getDatabase();
+    const { FolderRepository } = require('../../database/repositories');
+    const folderRepo = new FolderRepository(db);
+    const folders = folderRepo.getAll();
+    const firstFolderId = folders[0].id;
+
     renderWithProviders(
       <FolderPickerScreen 
         navigation={mockNavigation} 
-        route={{ params: { _onSelect: mockOnSelect } }}
+        route={{ params: { selectedFolderIds: [firstFolderId] } }}
       />
     );
     
@@ -217,30 +222,20 @@ describe('FolderPickerScreen', () => {
       expect(screen.getAllByText('YouTube').length).toBeGreaterThan(0);
       expect(savedHeaderOptions).toBeTruthy();
     });
-
-    const db = getDatabase();
-    const { FolderRepository } = require('../../database/repositories');
-    const folderRepo = new FolderRepository(db);
-    const folders = folderRepo.getAll();
-    const firstFolderId = folders[0].id;
-
-    await act(async () => {
-      fireEvent.press(screen.getByTestId(`folder-item-${firstFolderId}`));
-    });
-
     await waitFor(() => {
       expect(screen.getByText('✓ 1 folder selected')).toBeTruthy();
     });
 
     const latestOptions = mockNavigation.setOptions.mock.calls[mockNavigation.setOptions.mock.calls.length - 1][0];
     const { getByText: getByTextInHeader } = render(latestOptions.headerRight());
-    fireEvent.press(getByTextInHeader('Done'));
+    await act(async () => {
+      fireEvent.press(getByTextInHeader('Done'));
+    });
 
-    // Done invokes the callback and closes; headerRight in tests can capture initial state,
-    // so we assert callback and goBack were called and that selection UI was shown
-    expect(mockOnSelect).toHaveBeenCalled();
-    expect(Array.isArray(mockOnSelect.mock.calls[0][0])).toBe(true);
     expect(mockNavigation.goBack).toHaveBeenCalled();
+    const result = getAndClearPendingFolderPickerResult();
+    expect(result).toHaveLength(1);
+    expect(result).toContain(firstFolderId);
   });
 
   it('uses native back button for closing', () => {

@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { usePreventRemove } from '@react-navigation/native';
+import { usePreventRemove, useFocusEffect } from '@react-navigation/native';
 import TagsInput from '../Components/TagsInput';
 import { useDatabase } from '../Context/DatabaseContext';
 import globalStyles from '../CSS/GlobalCss';
+import { getAndClearPendingFolderPickerResult } from '../Utils/folderPickerResult';
 
 /**
  * NewBookmarkScreen
@@ -38,6 +39,17 @@ const NewBookmarkScreen = ({ navigation, route }) => {
   const [errors, setErrors] = useState({});
   const [allTags, setAllTags] = useState([]);
   const savedSuccessfullyRef = useRef(false);
+
+  // Native stack modal doesn't pass params back; FolderPicker writes to bridge and we read on focus.
+  useFocusEffect(
+    React.useCallback(() => {
+      const picked = getAndClearPendingFolderPickerResult();
+      if (picked !== null && Array.isArray(picked)) {
+        setSelectedFolderIds(picked);
+        setErrors((e) => ({ ...e, folders: undefined }));
+      }
+    }, [])
+  );
 
   useEffect(() => {
     // Load existing tags for autocomplete
@@ -191,12 +203,9 @@ const NewBookmarkScreen = ({ navigation, route }) => {
   });
 
   const openFolderPicker = () => {
+    console.log('[NewBookmark] Opening FolderPicker', 'selectedFolderIds:', selectedFolderIds?.length ?? 0, 'ids:', selectedFolderIds);
     navigation.navigate('FolderPicker', {
       selectedFolderIds: selectedFolderIds,
-      _onSelect: (ids) => {
-        setSelectedFolderIds(ids);
-        setErrors({ ...errors, folders: undefined });
-      },
     });
   };
 
