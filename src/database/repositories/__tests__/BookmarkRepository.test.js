@@ -313,6 +313,38 @@ describe('BookmarkRepository', () => {
     });
   });
 
+  describe('tag search case-insensitivity', () => {
+    it('searchByTag finds bookmarks when query case differs from stored tag', () => {
+      const tagRepo = new TagRepository(db);
+      const b = bookmarkRepo.create({ name: 'Tagged Bookmark', url: 'https://tagged.com' }, [folderId]);
+      tagRepo.setTagsForBookmark(b.id, ['Ravi', 'maama']);
+      expect(bookmarkRepo.searchByTag('ravi').map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchByTag('Ravi').map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchByTag('RAVI').map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchByTag('maama').map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchByTag('Maama').map(r => r.id)).toContain(b.id);
+    });
+
+    it('searchAll finds bookmarks by tag regardless of query case', () => {
+      const tagRepo = new TagRepository(db);
+      const b = bookmarkRepo.create({ name: 'Other', url: 'https://other.com' }, [folderId]);
+      tagRepo.setTagsForBookmark(b.id, ['Ravi', 'maama']);
+      expect(bookmarkRepo.searchAll('Ravi').map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchAll('ravi').map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchAll('maama').map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchAll('Maama').map(r => r.id)).toContain(b.id);
+    });
+
+    it('searchInFolder finds bookmarks by tag regardless of query case', () => {
+      const tagRepo = new TagRepository(db);
+      const b = bookmarkRepo.create({ name: 'In Folder', url: 'https://infolder.com' }, [folderId]);
+      tagRepo.setTagsForBookmark(b.id, ['Ravi', 'maama']);
+      expect(bookmarkRepo.searchInFolder('Ravi', folderId).map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchInFolder('ravi', folderId).map(r => r.id)).toContain(b.id);
+      expect(bookmarkRepo.searchInFolder('Maama', folderId).map(r => r.id)).toContain(b.id);
+    });
+  });
+
   describe('searchAll with FTS fallback', () => {
     it('deduplicates results from multiple sources', () => {
       bookmarkRepo.create({ name: 'Dedup Test', url: 'https://dedup.com' }, [folderId]);

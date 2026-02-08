@@ -91,6 +91,50 @@ If you encounter issues, try clearing the cache:
 npx expo start --clear
 ```
 
+## EAS Build (Android & iOS)
+
+Use [Expo Application Services (EAS)](https://expo.dev) to build installable apps for Android and iOS and share them with testers.
+
+### Setup
+
+1. **Create a free account** at [expo.dev](https://expo.dev) and log in.
+2. **Install EAS CLI and log in**:
+
+```bash
+npm install -g eas-cli
+eas login
+```
+
+3. **Configure the project for EAS** (if not already done):
+
+```bash
+eas build:configure
+```
+
+### Creating builds
+
+**Android (simplest)**  
+Produces an APK you can share via a link. No paid account required.
+
+```bash
+eas build --profile preview --platform android
+```
+
+When the build finishes, EAS gives you a download link (and QR code). Share that link; testers open it on their Android device and install the APK.
+
+**iOS**  
+Requires an [Apple Developer account](https://developer.apple.com/programs/) ($99/year). You can then run:
+
+```bash
+eas build --profile preview --platform ios
+```
+
+Share the **TestFlight** link from the build page so testers can install the app on their iPhone or iPad.
+
+### Build profiles
+
+The project’s `eas.json` defines profiles such as `development`, `preview`, and `production`. The **preview** profile is typically used for internal testing (e.g. Android APK, iOS ad-hoc/TestFlight).
+
 ## Project Structure
 
 ```

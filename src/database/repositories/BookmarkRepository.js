@@ -269,9 +269,9 @@ export class BookmarkRepository {
       `SELECT DISTINCT b.* FROM bookmarks b
        INNER JOIN bookmark_tags bt ON b.id = bt.bookmarkId
        INNER JOIN tags t ON bt.tagId = t.id
-       WHERE t.name LIKE ?
+       WHERE t.name LIKE ? COLLATE NOCASE
        ORDER BY b.createdAt DESC`,
-      [`%${tagName}%`]
+      [`%${tagName.trim()}%`]
     );
   }
 
@@ -299,7 +299,7 @@ export class BookmarkRepository {
         `SELECT DISTINCT b.* FROM bookmarks b
          INNER JOIN bookmark_tags bt ON b.id = bt.bookmarkId
          INNER JOIN tags t ON bt.tagId = t.id
-         WHERE t.name LIKE ?
+         WHERE t.name LIKE ? COLLATE NOCASE
          ORDER BY b.createdAt DESC`,
         [like]
       );
@@ -318,7 +318,7 @@ export class BookmarkRepository {
         `SELECT DISTINCT b.* FROM bookmarks b
          LEFT JOIN bookmark_tags bt ON b.id = bt.bookmarkId
          LEFT JOIN tags t ON bt.tagId = t.id
-         WHERE b.name LIKE ? OR b.url LIKE ? OR t.name LIKE ?
+         WHERE b.name LIKE ? OR b.url LIKE ? OR t.name LIKE ? COLLATE NOCASE
          ORDER BY b.createdAt DESC`,
         [like, like, like]
       );
@@ -357,7 +357,7 @@ export class BookmarkRepository {
          INNER JOIN folder_bookmarks fb ON b.id = fb.bookmarkId AND fb.folderId IN (${inPlaceholders})
          INNER JOIN bookmark_tags bt ON b.id = bt.bookmarkId
          INNER JOIN tags t ON bt.tagId = t.id
-         WHERE t.name LIKE ?
+         WHERE t.name LIKE ? COLLATE NOCASE
          ORDER BY b.createdAt DESC`,
         [...folderIds, like]
       );
@@ -377,7 +377,7 @@ export class BookmarkRepository {
          INNER JOIN folder_bookmarks fb ON b.id = fb.bookmarkId AND fb.folderId IN (${inPlaceholders})
          LEFT JOIN bookmark_tags bt ON b.id = bt.bookmarkId
          LEFT JOIN tags t ON bt.tagId = t.id
-         WHERE b.name LIKE ? OR b.url LIKE ? OR t.name LIKE ?
+         WHERE b.name LIKE ? OR b.url LIKE ? OR t.name LIKE ? COLLATE NOCASE
          ORDER BY b.createdAt DESC`,
         [...folderIds, like, like, like]
       );

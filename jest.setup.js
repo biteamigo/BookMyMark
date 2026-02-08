@@ -374,15 +374,46 @@ const createMockDatabase = () => ({
         .map(fb => fb.bookmarkId);
       return mockDbData.bookmarks.filter(b => bookmarkIds.includes(b.id));
     }
-    // BOOKMARK SEARCH with LIKE (global search only; scoped search has folder_bookmarks)
+    // BOOKMARK SEARCH BY TAG (searchByTag, or tag branch of searchAll): INNER JOIN bookmark_tags + tags, t.name LIKE ? (case-insensitive)
+    if (sql.includes("FROM bookmarks b") && sql.includes("INNER JOIN bookmark_tags") && sql.includes("INNER JOIN tags") && sql.includes("t.name LIKE") && params && params.length === 1) {
+      const pattern = params[0];
+      const searchTerm = (pattern && pattern.replace(/%/g, '')) || '';
+      if (!searchTerm) return [];
+      const bookmarkIdsWithTag = new Set();
+      mockDbData.bookmark_tags.forEach(bt => {
+        const tag = mockDbData.tags.find(t => t.id === bt.tagId);
+        if (tag && tag.name && tag.name.toLowerCase().includes(searchTerm.toLowerCase())) {
+          bookmarkIdsWithTag.add(bt.bookmarkId);
+        }
+      });
+      return mockDbData.bookmarks.filter(b => bookmarkIdsWithTag.has(b.id));
+    }
+    // BOOKMARK SEARCH with LIKE (global: searchAll fallback - name, url, or tag)
     if (sql.includes("FROM bookmarks") && sql.includes("LIKE") && !sql.includes("folder_bookmarks")) {
       const pattern = params?.[0];
       if (pattern) {
-        const searchTerm = pattern.replace(/%/g, '');
-        return mockDbData.bookmarks.filter(b => 
-          b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          b.url.toLowerCase().includes(searchTerm.toLowerCase())
+        const searchTerm = pattern.replace(/%/g, '').toLowerCase();
+        const nameOrUrlMatch = mockDbData.bookmarks.filter(b =>
+          (b.name && b.name.toLowerCase().includes(searchTerm)) ||
+          (b.url && b.url.toLowerCase().includes(searchTerm))
         );
+        const tagMatchBookmarkIds = new Set();
+        mockDbData.bookmark_tags.forEach(bt => {
+          const tag = mockDbData.tags.find(t => t.id === bt.tagId);
+          if (tag && tag.name && tag.name.toLowerCase().includes(searchTerm)) {
+            tagMatchBookmarkIds.add(bt.bookmarkId);
+          }
+        });
+        const tagMatchBookmarks = mockDbData.bookmarks.filter(b => tagMatchBookmarkIds.has(b.id));
+        const seen = new Set();
+        const combined = [];
+        for (const b of [...nameOrUrlMatch, ...tagMatchBookmarks]) {
+          if (!seen.has(b.id)) {
+            seen.add(b.id);
+            combined.push(b);
+          }
+        }
+        return combined;
       }
       return mockDbData.bookmarks;
     }
