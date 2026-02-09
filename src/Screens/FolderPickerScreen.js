@@ -406,9 +406,7 @@ const FolderPickerScreen = ({ navigation, route }) => {
 
   const handleDone = React.useCallback(() => {
     const ids = Array.from(selectedIdsRef.current);
-    console.log('[FolderPicker] Done pressed', 'count:', ids.length, 'ids:', ids);
     setPendingFolderPickerResult(ids);
-    console.log('[FolderPicker] goBack() called');
     navigation.goBack();
   }, [navigation]);
 

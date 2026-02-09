@@ -1,5 +1,5 @@
 import React from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFolders } from "../Context/FolderContext";
 
@@ -85,6 +85,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: "center",
+    // On Android, ensure the bar draws above the bottom safe area / system UI overlay.
+    zIndex: 100,
+    elevation: Platform.OS === "android" ? 24 : undefined,
   },
   pill: {
     flexDirection: "row",
@@ -98,6 +101,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
+    // On Android, opaque background so the bar isn't covered by any overlay beneath it.
+    ...(Platform.OS === "android" && {
+      backgroundColor: "rgba(245, 245, 247, 0.98)",
+    }),
   },
   actionButton: {
     alignItems: "center",

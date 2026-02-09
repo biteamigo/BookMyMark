@@ -203,7 +203,6 @@ const NewBookmarkScreen = ({ navigation, route }) => {
   });
 
   const openFolderPicker = () => {
-    console.log('[NewBookmark] Opening FolderPicker', 'selectedFolderIds:', selectedFolderIds?.length ?? 0, 'ids:', selectedFolderIds);
     navigation.navigate('FolderPicker', {
       selectedFolderIds: selectedFolderIds,
     });
