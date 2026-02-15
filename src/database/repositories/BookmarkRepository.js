@@ -406,6 +406,23 @@ export class BookmarkRepository {
     );
     return result.count > 0;
   }
+
+  /**
+   * Check if URL already exists on another bookmark (exclude one by id, e.g. when editing)
+   * @param {string} url
+   * @param {string} [excludeBookmarkId] - bookmark id to exclude from the check
+   * @returns {boolean}
+   */
+  urlExistsExcluding(url, excludeBookmarkId) {
+    if (!excludeBookmarkId) {
+      return this.urlExists(url);
+    }
+    const rows = this.db.getAllSync(
+      "SELECT id FROM bookmarks WHERE url = ?",
+      [url]
+    );
+    return rows.some((row) => String(row.id) !== String(excludeBookmarkId));
+  }
 }
 
 export default BookmarkRepository;

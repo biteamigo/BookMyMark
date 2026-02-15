@@ -8,6 +8,7 @@ const EllipsisMenuButton = ({
   onNewFolder, 
   onNewBookmark,
   onDelete,
+  onEdit,
   viewMode,
   onViewModeChange,
   isSelectionMode,
@@ -33,6 +34,7 @@ const EllipsisMenuButton = ({
         onNewFolder={onNewFolder}
         onNewBookmark={onNewBookmark}
         onDelete={onDelete}
+        onEdit={onEdit}
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
         isSelectionMode={isSelectionMode}

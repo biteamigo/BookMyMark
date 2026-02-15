@@ -16,6 +16,8 @@ jest.mock('../../Utils/folderPickerResult', () => ({
 
 // Mock usePreventRemove hook - capture callback so tests can simulate "back" and verify no Discard alert after save
 let capturedPreventRemoveCallback;
+// Allow tests to re-run focus effect (e.g. to simulate return from folder picker)
+let runFocusEffectAgain;
 jest.mock('@react-navigation/native', () => {
   const React = require('react');
   const actual = jest.requireActual('@react-navigation/native');
@@ -25,8 +27,9 @@ jest.mock('@react-navigation/native', () => {
       capturedPreventRemoveCallback = callback;
     }),
     useFocusEffect: jest.fn((callback) => {
+      const fn = typeof callback === 'function' ? callback : callback();
+      runFocusEffectAgain = () => fn();
       React.useEffect(() => {
-        const fn = typeof callback === 'function' ? callback : callback();
         fn();
         return () => {};
       }, []);
@@ -639,5 +642,174 @@ describe('NewBookmarkScreen', () => {
     const inYouTube = bookmarkRepo.getByFolder(folderB.id);
     expect(inMusic.map(b => b.id)).toContain(saved.id);
     expect(inYouTube.map(b => b.id)).toContain(saved.id);
+  });
+
+  describe('edit mode (editBookmarkId)', () => {
+    it('shows "Edit Bookmark" in header when editBookmarkId is set', () => {
+      const db = getDatabase();
+      const { BookmarkRepository } = require('../../database/repositories');
+      const bookmarkRepo = new BookmarkRepository(db);
+      const bookmark = bookmarkRepo.create(
+        { name: 'To Edit', url: 'https://edit-initial.com' },
+        [folderId]
+      );
+
+      renderWithProviders({ params: { editBookmarkId: bookmark.id } });
+
+      expect(savedHeaderOptions).toBeTruthy();
+      const HeaderTitle = savedHeaderOptions.headerTitle;
+      const { getByText } = render(<HeaderTitle />);
+      expect(getByText('Edit Bookmark')).toBeTruthy();
+    });
+
+    it('pre-fills form with bookmark name, url, folders and tags when editBookmarkId is set', async () => {
+      const db = getDatabase();
+      const { BookmarkRepository, TagRepository } = require('../../database/repositories');
+      const bookmarkRepo = new BookmarkRepository(db);
+      const tagRepo = new TagRepository(db);
+      const bookmark = bookmarkRepo.create(
+        { name: 'Pre-filled Name', url: 'https://prefilled.com' },
+        [folderId]
+      );
+      tagRepo.setTagsForBookmark(bookmark.id, ['edit-tag']);
+
+      renderWithProviders({ params: { editBookmarkId: bookmark.id } });
+
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Pre-filled Name')).toBeTruthy();
+        expect(screen.getByDisplayValue('https://prefilled.com')).toBeTruthy();
+      });
+      expect(screen.getByText('Test Folder')).toBeTruthy();
+      expect(screen.getByText('edit-tag')).toBeTruthy();
+    });
+
+    it('updates existing bookmark when saving in edit mode', async () => {
+      const db = getDatabase();
+      const { BookmarkRepository } = require('../../database/repositories');
+      const bookmarkRepo = new BookmarkRepository(db);
+      const bookmark = bookmarkRepo.create(
+        { name: 'Original', url: 'https://original-edit.com' },
+        [folderId]
+      );
+
+      renderWithProviders({ params: { editBookmarkId: bookmark.id } });
+
+      await waitFor(() => expect(screen.getByDisplayValue('Original')).toBeTruthy());
+
+      fireEvent.changeText(screen.getByTestId('name-input'), 'Updated Name');
+      fireEvent.changeText(screen.getByTestId('url-input'), 'https://updated-url.com');
+
+      await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+      const HeaderRight = savedHeaderOptions.headerRight();
+      const { getByText: getHeaderText } = render(HeaderRight);
+      fireEvent.press(getHeaderText('Save'));
+
+      await waitFor(() => expect(mockNavigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
+
+      const updated = bookmarkRepo.getById(bookmark.id);
+      expect(updated).toBeTruthy();
+      expect(updated.name).toBe('Updated Name');
+      expect(updated.url).toBe('https://updated-url.com');
+      expect(bookmarkRepo.getAll().length).toBe(1);
+    });
+
+    it('shows duplicate URL alert when edited URL exists on another bookmark', async () => {
+      const db = getDatabase();
+      const { BookmarkRepository } = require('../../database/repositories');
+      const bookmarkRepo = new BookmarkRepository(db);
+      const b1 = bookmarkRepo.create({ name: 'First', url: 'https://first.com' }, [folderId]);
+      bookmarkRepo.create({ name: 'Second', url: 'https://second.com' }, [folderId]);
+
+      renderWithProviders({ params: { editBookmarkId: b1.id } });
+
+      await waitFor(() => expect(screen.getByDisplayValue('First')).toBeTruthy());
+
+      fireEvent.changeText(screen.getByTestId('url-input'), 'https://second.com');
+
+      await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+      const HeaderRight = savedHeaderOptions.headerRight();
+      const { getByText: getHeaderText } = render(HeaderRight);
+      fireEvent.press(getHeaderText('Save'));
+
+      await waitFor(() => {
+        expect(Alert.alert).toHaveBeenCalledWith(
+          'Duplicate URL',
+          expect.stringContaining('already exists on another bookmark'),
+          expect.any(Array)
+        );
+      });
+    });
+
+    it('updates bookmark when "Use Anyway" pressed after duplicate URL warning in edit mode', async () => {
+      const db = getDatabase();
+      const { BookmarkRepository } = require('../../database/repositories');
+      const bookmarkRepo = new BookmarkRepository(db);
+      const b1 = bookmarkRepo.create({ name: 'First', url: 'https://first.com' }, [folderId]);
+      bookmarkRepo.create({ name: 'Second', url: 'https://second.com' }, [folderId]);
+
+      renderWithProviders({ params: { editBookmarkId: b1.id } });
+
+      await waitFor(() => expect(screen.getByDisplayValue('First')).toBeTruthy());
+      fireEvent.changeText(screen.getByTestId('url-input'), 'https://second.com');
+
+      await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+      const HeaderRight = savedHeaderOptions.headerRight();
+      const { getByText: getHeaderText } = render(HeaderRight);
+      fireEvent.press(getHeaderText('Save'));
+
+      await waitFor(() => expect(Alert.alert).toHaveBeenCalled());
+      const alertCall = Alert.alert.mock.calls.find(c => c[0] === 'Duplicate URL');
+      const useAnyway = alertCall[2].find(btn => btn.text === 'Use Anyway');
+      await act(async () => {
+        useAnyway.onPress();
+      });
+
+      await waitFor(() => expect(mockNavigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
+      const updated = bookmarkRepo.getById(b1.id);
+      expect(updated.url).toBe('https://second.com');
+    });
+
+    it('edit mode pre-fills multiple folders and save path uses saveUpdatedBookmark', async () => {
+      const db = getDatabase();
+      const { FolderRepository, BookmarkRepository } = require('../../database/repositories');
+      const folderRepo = new FolderRepository(db);
+      const bookmarkRepo = new BookmarkRepository(db);
+      const folderA = folderRepo.create({ name: 'Folder A', icon: 'folder' });
+      const folderB = folderRepo.create({ name: 'Folder B', icon: 'folder' });
+      const bookmark = bookmarkRepo.create(
+        { name: 'Two Folders', url: 'https://two-folders.com' },
+        [folderA.id, folderB.id]
+      );
+
+      renderWithProviders({ params: { editBookmarkId: bookmark.id } });
+      await waitFor(() => expect(screen.getByDisplayValue('Two Folders')).toBeTruthy());
+      expect(screen.getByDisplayValue('https://two-folders.com')).toBeTruthy();
+      expect(screen.getByText(/Folder A.*Folder B|Folder B.*Folder A/)).toBeTruthy();
+    });
+
+    it('shows Discard Changes when leaving edit with unsaved changes', async () => {
+      const db = getDatabase();
+      const { BookmarkRepository } = require('../../database/repositories');
+      const bookmarkRepo = new BookmarkRepository(db);
+      const bookmark = bookmarkRepo.create(
+        { name: 'Discard Test', url: 'https://discard.com' },
+        [folderId]
+      );
+
+      renderWithProviders({ params: { editBookmarkId: bookmark.id } });
+
+      await waitFor(() => expect(screen.getByDisplayValue('Discard Test')).toBeTruthy());
+      fireEvent.changeText(screen.getByTestId('name-input'), 'Changed but not saved');
+
+      expect(capturedPreventRemoveCallback).toBeTruthy();
+      Alert.alert.mockClear();
+      capturedPreventRemoveCallback({ data: { action: { type: 'GO_BACK' } } });
+
+      expect(Alert.alert).toHaveBeenCalledWith(
+        'Discard Changes?',
+        'You have unsaved changes. Are you sure you want to go back?',
+        expect.any(Array)
+      );
+    });
   });
 });

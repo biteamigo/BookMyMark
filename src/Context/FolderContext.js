@@ -79,6 +79,7 @@ export const FolderProvider = ({ children }) => {
       value={{
         categories,
         editingFolderId,
+        setEditingFolderId,
         isLoading,
         addFolder,
         updateFolderName,

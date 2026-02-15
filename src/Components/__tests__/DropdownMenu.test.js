@@ -160,5 +160,77 @@ describe("DropdownMenu", () => {
       expect(onDelete).not.toHaveBeenCalled();
       expect(mockOnClose).toHaveBeenCalled();
     });
+
+    it("shows Edit when isSelectionMode is true", () => {
+      render(
+        <DropdownMenu
+          {...defaultProps}
+          isSelectionMode={true}
+          selectedCount={1}
+          onEdit={jest.fn()}
+        />
+      );
+      expect(screen.getByText("Edit")).toBeOnTheScreen();
+    });
+
+    it("calls onEdit and onClose when Edit is pressed and selectedCount is 1", () => {
+      const onEdit = jest.fn();
+      render(
+        <DropdownMenu
+          {...defaultProps}
+          isSelectionMode={true}
+          selectedCount={1}
+          onEdit={onEdit}
+        />
+      );
+      fireEvent.press(screen.getByText("Edit"));
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      expect(mockOnClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not call onEdit when Edit is pressed and selectedCount is 0", () => {
+      const onEdit = jest.fn();
+      render(
+        <DropdownMenu
+          {...defaultProps}
+          isSelectionMode={true}
+          selectedCount={0}
+          onEdit={onEdit}
+        />
+      );
+      fireEvent.press(screen.getByText("Edit"));
+      expect(onEdit).not.toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("does not call onEdit when Edit is pressed and selectedCount is 2", () => {
+      const onEdit = jest.fn();
+      render(
+        <DropdownMenu
+          {...defaultProps}
+          isSelectionMode={true}
+          selectedCount={2}
+          onEdit={onEdit}
+        />
+      );
+      fireEvent.press(screen.getByText("Edit"));
+      expect(onEdit).not.toHaveBeenCalled();
+      expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("handles undefined onEdit gracefully when Edit is pressed with selectedCount 1", () => {
+      render(
+        <DropdownMenu
+          {...defaultProps}
+          isSelectionMode={true}
+          selectedCount={1}
+          onEdit={undefined}
+        />
+      );
+      expect(() => {
+        fireEvent.press(screen.getByText("Edit"));
+      }).not.toThrow();
+      // When onEdit is undefined, handleEdit does not call onClose (only calls when onEdit is defined)
+    });
   });
 });

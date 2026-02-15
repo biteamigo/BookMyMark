@@ -32,7 +32,7 @@ const FolderViewScreen = ({ navigation, route }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 250);
   const { folderRepository, bookmarkRepository } = useDatabase();
-  const { editingFolderId, updateFolderName } = useFolders();
+  const { editingFolderId, setEditingFolderId, updateFolderName } = useFolders();
   
   const [editingName, setEditingName] = useState("");
   const [originalName, setOriginalName] = useState("");
@@ -206,6 +206,29 @@ const FolderViewScreen = ({ navigation, route }) => {
     setToastVisible(true);
   };
 
+  const parseItemKey = (itemKey) => {
+    const dashIndex = itemKey.indexOf('-');
+    if (dashIndex === -1) return { type: null, id: null };
+    return { type: itemKey.slice(0, dashIndex), id: itemKey.slice(dashIndex + 1) };
+  };
+
+  const handleEdit = () => {
+    if (selectedItems.size !== 1) return;
+    const itemKey = Array.from(selectedItems)[0];
+    const { type, id } = parseItemKey(itemKey);
+    const item = items.find((i) => i.type === type && i.id === id);
+    if (!item) return;
+    if (type === 'folder') {
+      setEditingFolderId(id);
+      setIsSelectionMode(false);
+      setSelectedItems(new Set());
+    } else if (type === 'bookmark') {
+      navigation.navigate('NewBookmark', { editBookmarkId: id });
+      setIsSelectionMode(false);
+      setSelectedItems(new Set());
+    }
+  };
+
   const handleDelete = () => {
     if (selectedItems.size === 0) return;
 
@@ -214,7 +237,7 @@ const FolderViewScreen = ({ navigation, route }) => {
     const bookmarks = [];
     
     selectedItems.forEach((itemKey) => {
-      const [type, id] = itemKey.split('-');
+      const { type, id } = parseItemKey(itemKey);
       if (type === 'folder') {
         folders.push(id);
       } else if (type === 'bookmark') {
@@ -426,12 +449,13 @@ const FolderViewScreen = ({ navigation, route }) => {
     }
   };
 
-  // Expose view mode, selection toggle, and delete handler to navigation params for header access
+  // Expose view mode, selection toggle, delete and edit handlers to navigation params for header access
   useEffect(() => {
     navigation.setParams({
       viewMode: viewMode,
       _toggleSelectionMode: toggleSelectionMode,
       _handleDelete: handleDelete,
+      _handleEdit: handleEdit,
       isSelectionMode: isSelectionMode,
       selectedCount: selectedItems.size,
     });
@@ -490,6 +514,7 @@ const FolderViewScreen = ({ navigation, route }) => {
         onSelect={toggleSelectionMode}
         onNewBookmark={() => navigation.navigate('NewBookmark', { currentFolderId })}
         onDelete={handleDelete}
+        onEdit={handleEdit}
         isSelectionMode={isSelectionMode}
         selectedCount={selectedItems.size}
       />

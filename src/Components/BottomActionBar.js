@@ -3,7 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet, Platform } from "react-native
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFolders } from "../Context/FolderContext";
 
-const BottomActionBar = ({ currentFolderId, onSelect, onNewBookmark, onDelete, isSelectionMode, selectedCount }) => {
+const BottomActionBar = ({ currentFolderId, onSelect, onNewBookmark, onDelete, onEdit, isSelectionMode, selectedCount }) => {
   const { addFolder } = useFolders();
 
   const handleNewFolder = () => {
@@ -16,7 +16,14 @@ const BottomActionBar = ({ currentFolderId, onSelect, onNewBookmark, onDelete, i
     }
   };
 
+  const handleEdit = () => {
+    if (selectedCount === 1 && onEdit) {
+      onEdit();
+    }
+  };
+
   const isDeleteDisabled = selectedCount === 0;
+  const isEditDisabled = selectedCount !== 1;
 
   return (
     <View style={styles.container}>
@@ -38,20 +45,37 @@ const BottomActionBar = ({ currentFolderId, onSelect, onNewBookmark, onDelete, i
         <View style={styles.divider} />
 
         {isSelectionMode ? (
-          <TouchableOpacity 
-            style={[styles.actionButton, isDeleteDisabled && styles.disabledButton]} 
-            onPress={handleDelete}
-            disabled={isDeleteDisabled}
-          >
-            <Ionicons 
-              name="trash-outline" 
-              size={24} 
-              color={isDeleteDisabled ? "#C7C7CC" : "#FF3B30"} 
-            />
-            <Text style={[styles.actionText, isDeleteDisabled ? styles.disabledText : styles.deleteText]}>
-              Delete
-            </Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity 
+              style={[styles.actionButton, isEditDisabled && styles.disabledButton]} 
+              onPress={handleEdit}
+              disabled={isEditDisabled}
+            >
+              <Ionicons 
+                name="pencil" 
+                size={24} 
+                color={isEditDisabled ? "#C7C7CC" : "#007AFF"} 
+              />
+              <Text style={[styles.actionText, isEditDisabled ? styles.disabledText : styles.editText]}>
+                Edit
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.divider} />
+            <TouchableOpacity 
+              style={[styles.actionButton, isDeleteDisabled && styles.disabledButton]} 
+              onPress={handleDelete}
+              disabled={isDeleteDisabled}
+            >
+              <Ionicons 
+                name="trash-outline" 
+                size={24} 
+                color={isDeleteDisabled ? "#C7C7CC" : "#FF3B30"} 
+              />
+              <Text style={[styles.actionText, isDeleteDisabled ? styles.disabledText : styles.deleteText]}>
+                Delete
+              </Text>
+            </TouchableOpacity>
+          </>
         ) : (
           <>
             <TouchableOpacity 
@@ -123,6 +147,9 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     color: "#FF3B30",
+  },
+  editText: {
+    color: "#007AFF",
   },
   disabledButton: {
     opacity: 0.5,

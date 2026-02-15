@@ -87,12 +87,19 @@ const HeaderRight = ({ route }) => {
   };
   
   const deleteHandler = route?.params?._handleDelete;
-  
+  const editHandler = route?.params?._handleEdit;
+
   const handleDelete = React.useCallback(() => {
     if (deleteHandler) {
       deleteHandler();
     }
   }, [deleteHandler]);
+
+  const handleEdit = React.useCallback(() => {
+    if (editHandler) {
+      editHandler();
+    }
+  }, [editHandler]);
   
   return (
     <View style={styles.headerRightContainer}>
@@ -102,6 +109,7 @@ const HeaderRight = ({ route }) => {
         onNewFolder={handleNewFolder}
         onNewBookmark={handleNewBookmark}
         onDelete={handleDelete}
+        onEdit={handleEdit}
         viewMode={viewMode}
         onViewModeChange={handleViewModeChange}
         isSelectionMode={isSelectionMode}

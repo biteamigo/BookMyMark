@@ -361,6 +361,17 @@ describe("FolderViewScreen", () => {
         expect(typeof lastCall[0]._handleDelete).toBe('function');
       });
     });
+
+    it("exposes handleEdit via navigation params", async () => {
+      renderWithProviders();
+
+      await waitFor(() => {
+        const calls = mockSetParams.mock.calls;
+        const lastCall = calls[calls.length - 1];
+        expect(lastCall[0]._handleEdit).toBeDefined();
+        expect(typeof lastCall[0]._handleEdit).toBe('function');
+      });
+    });
   });
 
   describe("Delete flow", () => {
@@ -458,6 +469,111 @@ describe("FolderViewScreen", () => {
       });
 
       expect(getParams().selectedCount).toBe(1);
+    });
+  });
+
+  describe("Edit flow", () => {
+    it("handleEdit with no selection does not navigate", async () => {
+      renderWithProviders();
+
+      await waitFor(() => {
+        const calls = mockSetParams.mock.calls;
+        return calls.length > 0 && calls[calls.length - 1][0]._handleEdit != null;
+      });
+
+      const params = mockSetParams.mock.calls[mockSetParams.mock.calls.length - 1][0];
+      params._handleEdit();
+
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it("handleEdit with one bookmark selected navigates to NewBookmark with editBookmarkId", async () => {
+      const db = getDatabase();
+      const { FolderRepository, BookmarkRepository } = require('../../database/repositories');
+      const folderRepo = new FolderRepository(db);
+      const bookmarkRepo = new BookmarkRepository(db);
+      const folder = folderRepo.create({ name: 'LinkFolder', icon: 'folder' });
+      const bookmark = bookmarkRepo.create(
+        { name: 'My Link', url: 'https://example.com' },
+        [folder.id]
+      );
+
+      renderWithProviders({ route: { params: { folderId: folder.id } } });
+
+      await waitFor(() => expect(screen.getByTestId(`bookmark-item-${bookmark.id}`)).toBeTruthy());
+
+      const getParams = () => mockSetParams.mock.calls[mockSetParams.mock.calls.length - 1][0];
+      await waitFor(() => expect(getParams()._handleEdit).toBeDefined());
+
+      await act(async () => {
+        getParams()._toggleSelectionMode();
+      });
+
+      await waitFor(() => expect(getParams().selectedCount).toBe(0));
+      fireEvent.press(screen.getByTestId(`bookmark-item-${bookmark.id}`));
+
+      await waitFor(() => expect(getParams().selectedCount).toBe(1));
+
+      getParams()._handleEdit();
+
+      expect(mockNavigate).toHaveBeenCalledWith('NewBookmark', { editBookmarkId: bookmark.id });
+    });
+
+    it("handleEdit with one folder selected enters folder edit mode (inline rename)", async () => {
+      const db = getDatabase();
+      const { FolderRepository } = require('../../database/repositories');
+      const folderRepo = new FolderRepository(db);
+      const folder = folderRepo.create({ name: 'EditMeFolder', icon: 'folder' });
+
+      renderWithProviders();
+
+      await waitFor(() => expect(screen.getByText('EditMeFolder')).toBeTruthy());
+
+      const getParams = () => mockSetParams.mock.calls[mockSetParams.mock.calls.length - 1][0];
+      await waitFor(() => expect(getParams()._handleEdit).toBeDefined());
+
+      await act(async () => {
+        getParams()._toggleSelectionMode();
+      });
+
+      fireEvent.press(screen.getByText('EditMeFolder'));
+      await waitFor(() => expect(getParams().selectedCount).toBe(1));
+
+      getParams()._handleEdit();
+
+      await waitFor(() => {
+        const inputs = screen.queryAllByDisplayValue('EditMeFolder');
+        expect(inputs.length).toBeGreaterThan(0);
+      });
+    });
+
+    it("handleEdit with two items selected does not navigate", async () => {
+      const db = getDatabase();
+      const { FolderRepository, BookmarkRepository } = require('../../database/repositories');
+      const folderRepo = new FolderRepository(db);
+      const bookmarkRepo = new BookmarkRepository(db);
+      const folder = folderRepo.create({ name: 'TwoItemsFolder', icon: 'folder' });
+      const b1 = bookmarkRepo.create({ name: 'B1', url: 'https://b1.com' }, [folder.id]);
+      const b2 = bookmarkRepo.create({ name: 'B2', url: 'https://b2.com' }, [folder.id]);
+
+      renderWithProviders({ route: { params: { folderId: folder.id } } });
+
+      await waitFor(() => {
+        expect(screen.getByTestId(`bookmark-item-${b1.id}`)).toBeTruthy();
+        expect(screen.getByTestId(`bookmark-item-${b2.id}`)).toBeTruthy();
+      });
+
+      const getParams = () => mockSetParams.mock.calls[mockSetParams.mock.calls.length - 1][0];
+      await act(async () => { getParams()._toggleSelectionMode(); });
+      fireEvent.press(screen.getByTestId(`bookmark-item-${b1.id}`));
+      fireEvent.press(screen.getByTestId(`bookmark-item-${b2.id}`));
+      await waitFor(() => expect(getParams().selectedCount).toBe(2));
+
+      mockNavigate.mockClear();
+      getParams()._handleEdit();
+
+      expect(mockNavigate).not.toHaveBeenCalled();
     });
   });
 

@@ -10,6 +10,7 @@ const DropdownMenu = ({
   onNewFolder, 
   onNewBookmark,
   onDelete,
+  onEdit,
   viewMode,
   onViewModeChange,
   isSelectionMode,
@@ -24,10 +25,18 @@ const DropdownMenu = ({
   const selectColor = isSelectionMode ? "#007AFF" : "#000";
   
   const isDeleteDisabled = selectedCount === 0;
+  const isEditDisabled = selectedCount !== 1;
 
   const handleDelete = () => {
     if (!isDeleteDisabled && onDelete) {
       onDelete();
+      onClose();
+    }
+  };
+
+  const handleEdit = () => {
+    if (!isEditDisabled && onEdit) {
+      onEdit();
       onClose();
     }
   };
@@ -54,13 +63,23 @@ const DropdownMenu = ({
               <View style={styles.divider} />
               
               {isSelectionMode ? (
-                <MenuItem
-                  icon={<Ionicons name="trash-outline" size={24} color={isDeleteDisabled ? "#C7C7CC" : "#FF3B30"} />}
-                  label="Delete"
-                  onPress={handleDelete}
-                  disabled={isDeleteDisabled}
-                  textColor={isDeleteDisabled ? "#C7C7CC" : "#FF3B30"}
-                />
+                <>
+                  <MenuItem
+                    icon={<Ionicons name="pencil" size={24} color={isEditDisabled ? "#C7C7CC" : "#007AFF"} />}
+                    label="Edit"
+                    onPress={handleEdit}
+                    disabled={isEditDisabled}
+                    textColor={isEditDisabled ? "#C7C7CC" : "#007AFF"}
+                  />
+                  <View style={styles.divider} />
+                  <MenuItem
+                    icon={<Ionicons name="trash-outline" size={24} color={isDeleteDisabled ? "#C7C7CC" : "#FF3B30"} />}
+                    label="Delete"
+                    onPress={handleDelete}
+                    disabled={isDeleteDisabled}
+                    textColor={isDeleteDisabled ? "#C7C7CC" : "#FF3B30"}
+                  />
+                </>
               ) : (
                 <>
                   <MenuItem

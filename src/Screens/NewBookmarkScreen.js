@@ -28,7 +28,7 @@ import { getAndClearPendingFolderPickerResult } from '../Utils/folderPickerResul
  */
 const NewBookmarkScreen = ({ navigation, route }) => {
   const { bookmarkRepository, folderRepository, tagRepository } = useDatabase();
-  const { currentFolderId } = route.params || {};
+  const { currentFolderId, editBookmarkId } = route.params || {};
   
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -39,8 +39,11 @@ const NewBookmarkScreen = ({ navigation, route }) => {
   const [errors, setErrors] = useState({});
   const [allTags, setAllTags] = useState([]);
   const savedSuccessfullyRef = useRef(false);
+  const editDataLoadedRef = useRef(false);
+  const initialEditRef = useRef({ name: '', url: '', folderIds: [], tags: [] });
 
   // Native stack modal doesn't pass params back; FolderPicker writes to bridge and we read on focus.
+  // When editing, load bookmark data once; when returning from FolderPicker, apply picked folders.
   useFocusEffect(
     React.useCallback(() => {
       const picked = getAndClearPendingFolderPickerResult();
@@ -48,7 +51,25 @@ const NewBookmarkScreen = ({ navigation, route }) => {
         setSelectedFolderIds(picked);
         setErrors((e) => ({ ...e, folders: undefined }));
       }
-    }, [])
+      if (editBookmarkId && !editDataLoadedRef.current) {
+        const b = bookmarkRepository.getById(editBookmarkId);
+        if (b) {
+          const folderIds = bookmarkRepository.getFolders(editBookmarkId);
+          const tagNames = tagRepository.getTagsForBookmark(editBookmarkId).map((t) => t.name);
+          setName(b.name);
+          setUrl(b.url);
+          setSelectedFolderIds(folderIds);
+          setTags(tagNames);
+          initialEditRef.current = {
+            name: b.name,
+            url: b.url,
+            folderIds: [...folderIds],
+            tags: [...tagNames],
+          };
+          editDataLoadedRef.current = true;
+        }
+      }
+    }, [editBookmarkId, bookmarkRepository, tagRepository])
   );
 
   useEffect(() => {
@@ -140,25 +161,40 @@ const NewBookmarkScreen = ({ navigation, route }) => {
         finalUrl = 'https://' + finalUrl;
       }
 
-      // Check if URL already exists
-      if (bookmarkRepository.urlExists(finalUrl)) {
-        Alert.alert(
-          'Duplicate URL',
-          'This URL already exists. Do you want to add it anyway?',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Add Anyway', onPress: () => saveBookmark(finalUrl) }
-          ]
-        );
-        return;
+      if (editBookmarkId) {
+        // Edit: check duplicate URL excluding current bookmark
+        if (bookmarkRepository.urlExistsExcluding(finalUrl, editBookmarkId)) {
+          Alert.alert(
+            'Duplicate URL',
+            'This URL already exists on another bookmark. Do you want to use it anyway?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Use Anyway', onPress: () => saveUpdatedBookmark(finalUrl) }
+            ]
+          );
+          return;
+        }
+        saveUpdatedBookmark(finalUrl);
+      } else {
+        // Create: check if URL already exists
+        if (bookmarkRepository.urlExists(finalUrl)) {
+          Alert.alert(
+            'Duplicate URL',
+            'This URL already exists. Do you want to add it anyway?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Add Anyway', onPress: () => saveBookmark(finalUrl) }
+            ]
+          );
+          return;
+        }
+        saveBookmark(finalUrl);
       }
-
-      saveBookmark(finalUrl);
     } catch (error) {
       Alert.alert('Error', 'Failed to save bookmark. Please try again.');
       console.error('Save bookmark error:', error);
     }
-  }, [name, url, selectedFolderIds, tags, bookmarkRepository, tagRepository, navigation]);
+  }, [name, url, selectedFolderIds, tags, editBookmarkId, bookmarkRepository, tagRepository, navigation]);
 
   const saveBookmark = (finalUrl) => {
     // Create bookmark
@@ -180,8 +216,35 @@ const NewBookmarkScreen = ({ navigation, route }) => {
     navigation.goBack();
   };
 
+  const saveUpdatedBookmark = (finalUrl) => {
+    const id = editBookmarkId;
+    bookmarkRepository.update(id, { name: name.trim(), url: finalUrl });
+
+    const existingFolderIds = bookmarkRepository.getFolders(id);
+    const toRemove = existingFolderIds.filter((f) => !selectedFolderIds.includes(f));
+    const toAdd = selectedFolderIds.filter((f) => !existingFolderIds.includes(f));
+    toRemove.forEach((folderId) => bookmarkRepository.removeFromFolder(id, folderId));
+    toAdd.forEach((folderId) => bookmarkRepository.addToFolder(id, folderId));
+
+    tagRepository.setTagsForBookmark(id, tags);
+
+    savedSuccessfullyRef.current = true;
+    navigation.goBack();
+  };
+
   // Prevent going back with unsaved changes (unless we just saved)
-  const hasUnsavedChanges = Boolean(name || url || tags.length > 0);
+  const arraysEqual = (a, b) => {
+    if (a.length !== b.length) return false;
+    const sa = [...a].sort();
+    const sb = [...b].sort();
+    return sa.every((v, i) => v === sb[i]);
+  };
+  const hasUnsavedChanges = editBookmarkId
+    ? name !== initialEditRef.current.name ||
+      url !== initialEditRef.current.url ||
+      !arraysEqual(selectedFolderIds, initialEditRef.current.folderIds) ||
+      !arraysEqual(tags, initialEditRef.current.tags)
+    : Boolean(name || url || tags.length > 0);
 
   usePreventRemove(hasUnsavedChanges, ({ data }) => {
     if (savedSuccessfullyRef.current) {
@@ -217,6 +280,7 @@ const NewBookmarkScreen = ({ navigation, route }) => {
   };
 
   // Set up navigation header (memoize to avoid re-creating on every render)
+  const headerTitleText = editBookmarkId ? 'Edit Bookmark' : 'New Bookmark';
   React.useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
@@ -232,7 +296,7 @@ const NewBookmarkScreen = ({ navigation, route }) => {
             letterSpacing: 0.3,
             marginLeft: 2,
           }}>
-            New Bookmark
+            {headerTitleText}
           </Text>
         </View>
       ),
@@ -253,7 +317,7 @@ const NewBookmarkScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, handleSave]);
+  }, [navigation, handleSave, headerTitleText]);
 
   return (
     <SafeAreaView style={[globalStyles.pageView, styles.safeArea]}>

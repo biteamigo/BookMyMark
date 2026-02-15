@@ -114,4 +114,86 @@ describe("BottomActionBar", () => {
       }).not.toThrow();
     });
   });
+
+  describe("selection mode with Edit", () => {
+    const mockOnDelete = jest.fn();
+    const mockOnEdit = jest.fn();
+
+    it("shows Edit and Delete when isSelectionMode is true", () => {
+      renderWithProvider(
+        <BottomActionBar
+          {...defaultProps}
+          onDelete={mockOnDelete}
+          onEdit={mockOnEdit}
+          isSelectionMode={true}
+          selectedCount={1}
+        />
+      );
+
+      expect(screen.getByText("Edit")).toBeOnTheScreen();
+      expect(screen.getByText("Delete")).toBeOnTheScreen();
+      expect(screen.queryByText("New Folder")).toBeNull();
+      expect(screen.queryByText("New Bookmark")).toBeNull();
+    });
+
+    it("calls onEdit when Edit is pressed and selectedCount is 1", () => {
+      renderWithProvider(
+        <BottomActionBar
+          {...defaultProps}
+          onDelete={mockOnDelete}
+          onEdit={mockOnEdit}
+          isSelectionMode={true}
+          selectedCount={1}
+        />
+      );
+
+      fireEvent.press(screen.getByText("Edit"));
+      expect(mockOnEdit).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not call onEdit when Edit is pressed and selectedCount is 0", () => {
+      renderWithProvider(
+        <BottomActionBar
+          {...defaultProps}
+          onDelete={mockOnDelete}
+          onEdit={mockOnEdit}
+          isSelectionMode={true}
+          selectedCount={0}
+        />
+      );
+
+      fireEvent.press(screen.getByText("Edit"));
+      expect(mockOnEdit).not.toHaveBeenCalled();
+    });
+
+    it("does not call onEdit when Edit is pressed and selectedCount is 2", () => {
+      renderWithProvider(
+        <BottomActionBar
+          {...defaultProps}
+          onDelete={mockOnDelete}
+          onEdit={mockOnEdit}
+          isSelectionMode={true}
+          selectedCount={2}
+        />
+      );
+
+      fireEvent.press(screen.getByText("Edit"));
+      expect(mockOnEdit).not.toHaveBeenCalled();
+    });
+
+    it("handles undefined onEdit gracefully when Edit is pressed with selectedCount 1", () => {
+      renderWithProvider(
+        <BottomActionBar
+          {...defaultProps}
+          onDelete={mockOnDelete}
+          isSelectionMode={true}
+          selectedCount={1}
+        />
+      );
+
+      expect(() => {
+        fireEvent.press(screen.getByText("Edit"));
+      }).not.toThrow();
+    });
+  });
 });

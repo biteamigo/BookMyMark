@@ -144,6 +144,26 @@ describe('BookmarkRepository', () => {
     });
   });
 
+  describe('urlExistsExcluding', () => {
+    it('returns false when URL exists only on the excluded bookmark', () => {
+      const uniqueUrl = `https://only-me-${Date.now()}.com`;
+      const b = bookmarkRepo.create({ name: 'Only', url: uniqueUrl }, [folderId]);
+      expect(bookmarkRepo.urlExistsExcluding(uniqueUrl, b.id)).toBe(false);
+    });
+
+    it('returns true when URL exists on another bookmark (not excluded)', () => {
+      const b1 = bookmarkRepo.create({ name: 'First', url: 'https://shared.com' }, [folderId]);
+      const b2 = bookmarkRepo.create({ name: 'Second', url: 'https://other.com' }, [folderId]);
+      expect(bookmarkRepo.urlExistsExcluding('https://shared.com', b2.id)).toBe(true);
+    });
+
+    it('when excludeBookmarkId is not provided, behaves like urlExists', () => {
+      bookmarkRepo.create({ name: 'Any', url: 'https://any.com' }, [folderId]);
+      expect(bookmarkRepo.urlExistsExcluding('https://any.com')).toBe(true);
+      expect(bookmarkRepo.urlExistsExcluding('https://missing.com')).toBe(false);
+    });
+  });
+
   describe('search', () => {
     beforeEach(() => {
       bookmarkRepo.create({ name: 'React Docs', url: 'https://react.dev' }, [folderId]);

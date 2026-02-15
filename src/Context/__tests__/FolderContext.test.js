@@ -25,6 +25,12 @@ const TestConsumer = () => {
       <TouchableOpacity testID="cancel-editing" onPress={context.cancelEditing}>
         <Text>Cancel</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        testID="start-edit-folder"
+        onPress={() => context.setEditingFolderId && context.setEditingFolderId("test-edit-id")}
+      >
+        <Text>Start Edit</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -118,6 +124,24 @@ describe("FolderContext", () => {
       });
 
       expect(screen.getByTestId("editing-id").props.children).toBe("none");
+    });
+  });
+
+  describe("setEditingFolderId", () => {
+    it("exposes setEditingFolderId and sets editing id when called", () => {
+      render(
+        <TestWrapper>
+          <TestConsumer />
+        </TestWrapper>
+      );
+
+      expect(screen.getByTestId("editing-id").props.children).toBe("none");
+
+      act(() => {
+        fireEvent.press(screen.getByTestId("start-edit-folder"));
+      });
+
+      expect(screen.getByTestId("editing-id").props.children).toBe("test-edit-id");
     });
   });
 });

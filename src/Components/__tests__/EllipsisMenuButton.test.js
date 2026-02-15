@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
 import EllipsisMenuButton from "../EllipsisMenuButton";
+import DropdownMenu from "../DropdownMenu";
 
 describe("EllipsisMenuButton", () => {
   const mockOnSelect = jest.fn();
@@ -98,6 +99,37 @@ describe("EllipsisMenuButton", () => {
 
       // Menu should be closed
       expect(screen.queryByText("Select")).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("onEdit", () => {
+    it("passes onEdit to DropdownMenu when provided", () => {
+      const onEdit = jest.fn();
+      const { UNSAFE_getByType } = render(
+        <EllipsisMenuButton
+          {...defaultProps}
+          onEdit={onEdit}
+          isSelectionMode={true}
+          selectedCount={1}
+        />
+      );
+      const dropdown = UNSAFE_getByType(DropdownMenu);
+      expect(dropdown.props.onEdit).toBe(onEdit);
+    });
+
+    it("calls onEdit when Edit is pressed in dropdown and selectedCount is 1", () => {
+      const onEdit = jest.fn();
+      const { UNSAFE_getByType } = render(
+        <EllipsisMenuButton
+          {...defaultProps}
+          onEdit={onEdit}
+          isSelectionMode={true}
+          selectedCount={1}
+        />
+      );
+      fireEvent.press(UNSAFE_getByType("Ionicons"));
+      fireEvent.press(screen.getByText("Edit"));
+      expect(onEdit).toHaveBeenCalledTimes(1);
     });
   });
 });
