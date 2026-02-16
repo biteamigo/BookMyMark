@@ -10,6 +10,10 @@
 # testing
 /coverage
 
+# Maestro E2E test artifacts (screenshots, logs)
+.maestro/output/
+root-screen.png
+
 # production
 /build
 

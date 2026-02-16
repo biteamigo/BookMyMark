@@ -1,0 +1,14 @@
+# Sample Maestro flow: assert root FolderView screen loads
+# Run from project root: maestro test .maestro/
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- assertVisible:
+    text: "Search"
+- assertVisible:
+    text: "Select"
+- assertVisible:
+    text: "New Folder"
+- assertVisible:
+    text: "New Bookmark"
+- takeScreenshot: root-screen

@@ -1,0 +1,14 @@
+# Maestro workspace config for BookMyMark
+# https://docs.maestro.dev/maestro-configuration/workspace-config
+
+appId:
+  ios: com.biteamigo.BookMyMark
+  android: com.biteamigo.BookMyMark
+
+# Include flows in subdirectories (default is top-level only)
+flows:
+  - "*"
+  - "flows/*"
+
+# Where to save test artifacts (screenshots, logs) — keeps project root clean
+testOutputDir: .maestro/output

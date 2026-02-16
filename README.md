@@ -91,6 +91,185 @@ If you encounter issues, try clearing the cache:
 npx expo start --clear
 ```
 
+## Unit Testing
+
+The project uses **Jest** and **React Native Testing Library** for unit testing.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode (re-runs on file changes)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+### Running Specific Tests
+
+```bash
+# Run tests for a specific file or pattern
+npm test SearchBar
+
+# Run tests matching a pattern
+npm test -- --testNamePattern="renders"
+```
+
+### Test Structure
+
+Tests are organized in `__tests__` folders alongside the source files:
+
+```
+src/
+├── Classes/
+│   └── __tests__/
+│       ├── BookMark.test.js
+│       └── Category.test.js
+├── Components/
+│   └── __tests__/
+│       ├── SearchBar.test.js
+│       ├── MenuItem.test.js
+│       ├── DropdownMenu.test.js
+│       └── ...
+├── Context/
+│   └── __tests__/
+│       └── FolderContext.test.js
+└── Screens/
+    └── __tests__/
+        └── HomeScreen.test.js
+```
+
+### Writing New Tests
+
+Example test file structure:
+
+```javascript
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react-native";
+import MyComponent from "../MyComponent";
+
+describe("MyComponent", () => {
+  it("renders correctly", () => {
+    render(<MyComponent />);
+    expect(screen.getByText("Expected Text")).toBeOnTheScreen();
+  });
+
+  it("handles user interaction", () => {
+    const mockHandler = jest.fn();
+    render(<MyComponent onPress={mockHandler} />);
+    
+    fireEvent.press(screen.getByText("Button"));
+    expect(mockHandler).toHaveBeenCalled();
+  });
+});
+```
+
+## E2E Testing
+
+### Prerequisites for End-to-End tests
+
+E2E tests use [Maestro](https://maestro.mobile.dev), a mobile UI testing framework. Maestro is **free and open source** for local testing and for running in CI (e.g. GitHub Actions) with emulators.
+
+**Install Maestro (macOS)**
+
+Using [Homebrew](https://brew.sh):
+
+```bash
+brew tap mobile-dev-inc/tap
+brew install maestro
+```
+
+Verify the installation:
+
+```bash
+maestro --version
+```
+
+**Optional:** To disable anonymous analytics when running Maestro, set this before running tests:
+
+```bash
+export MAESTRO_CLI_NO_ANALYTICS=1
+```
+
+**Other requirements**
+
+- **Android E2E:** Android Studio (for the Android SDK and emulator). Ensure `ANDROID_HOME` is set (Android Studio usually does this; if not, set it to your SDK path, e.g. `~/Library/Android/sdk` on macOS).
+- **iOS E2E:** Xcode and iOS Simulator (not covered in the Android steps below).
+
+Flows live in `.maestro/flows/`. The app ID and inclusion patterns are in `.maestro/config.yaml`.
+
+### Android E2E testing (Maestro)
+
+Follow these steps to run Maestro E2E tests on an Android emulator. All commands are run from the **project root** (`BookMyMark/`).
+
+**1. Install Android Studio**
+
+- Download and install [Android Studio](https://developer.android.com/studio).
+- During setup, install the **Android SDK** and accept the licenses. This provides the emulator and `adb`.
+
+**2. Create an Android Virtual Device (AVD)**
+
+- In Android Studio: **Tools** → **Device Manager** (or **AVD Manager**).
+- Click **Create Device**, choose a device definition (e.g. **Pixel 9 Pro XL**), then choose a system image (e.g. API 35) and finish.
+- Note the AVD name (e.g. `Pixel_9_Pro_XL_2`). To list names from the terminal:
+
+```bash
+emulator -list-avds
+```
+
+**3. Start the emulator**
+
+Start your AVD (use the name from step 2):
+
+```bash
+emulator -avd Pixel_9_Pro_XL_2
+```
+
+Leave the emulator window open. Wait until the device has fully booted (home screen is visible).
+
+**4. Install the app on the emulator**
+
+In a terminal at the project root:
+
+```bash
+npx expo run:android
+```
+
+- If multiple devices are connected, choose the emulator when prompted.
+- The **first** run can take a long time (Gradle downloads dependencies and builds the native app). Later runs are faster.
+- When the build finishes, the app installs and launches on the emulator. You can close the app or leave it; Maestro will launch it when tests run.
+
+**5. Start the Metro bundler**
+
+The development build loads JavaScript from Metro, so Metro must be running when Maestro runs the app.
+
+In a **separate terminal** at the project root, start Metro and leave it running:
+
+```bash
+npx expo start
+```
+
+Wait until Metro is ready (e.g. "Metro waiting on …" or the QR code is shown). Do not stop this process while running E2E tests.
+
+**6. Run Maestro tests**
+
+In **another terminal** at the project root (with the emulator running and Metro already started):
+
+```bash
+maestro test .maestro/
+```
+
+Maestro will launch the app on the emulator, run the flows in `.maestro/flows/`, and report results.
+
+**Ongoing workflow**
+
+- **After JS/React-only changes:** You do **not** need to run `npx expo run:android` again. Keep Metro running and run `maestro test .maestro/` whenever you want to re-run E2E tests.
+- **After native/Android or `app.json` changes:** Run `npx expo run:android` again to rebuild and reinstall, then run Metro and Maestro as above.
+- To run a single flow: `maestro test .maestro/flows/01-root-screen.yaml`
+
 ## EAS Build (Android & iOS)
 
 Use [Expo Application Services (EAS)](https://expo.dev) to build installable apps for Android and iOS and share them with testers.
@@ -266,82 +445,6 @@ Make sure your Expo Go app is updated to support SDK 54.
 | `npm test` | Run tests with Jest |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Run tests with coverage report |
-
-## Testing
-
-The project uses **Jest** and **React Native Testing Library** for unit testing.
-
-### Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode (re-runs on file changes)
-npm run test:watch
-
-# Run tests with coverage report
-npm run test:coverage
-```
-
-### Running Specific Tests
-
-```bash
-# Run tests for a specific file or pattern
-npm test SearchBar
-
-# Run tests matching a pattern
-npm test -- --testNamePattern="renders"
-```
-
-### Test Structure
-
-Tests are organized in `__tests__` folders alongside the source files:
-
-```
-src/
-├── Classes/
-│   └── __tests__/
-│       ├── BookMark.test.js
-│       └── Category.test.js
-├── Components/
-│   └── __tests__/
-│       ├── SearchBar.test.js
-│       ├── MenuItem.test.js
-│       ├── DropdownMenu.test.js
-│       └── ...
-├── Context/
-│   └── __tests__/
-│       └── FolderContext.test.js
-└── Screens/
-    └── __tests__/
-        └── HomeScreen.test.js
-```
-
-### Writing New Tests
-
-Example test file structure:
-
-```javascript
-import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react-native";
-import MyComponent from "../MyComponent";
-
-describe("MyComponent", () => {
-  it("renders correctly", () => {
-    render(<MyComponent />);
-    expect(screen.getByText("Expected Text")).toBeOnTheScreen();
-  });
-
-  it("handles user interaction", () => {
-    const mockHandler = jest.fn();
-    render(<MyComponent onPress={mockHandler} />);
-    
-    fireEvent.press(screen.getByText("Button"));
-    expect(mockHandler).toHaveBeenCalled();
-  });
-});
-```
 
 ## License
 
