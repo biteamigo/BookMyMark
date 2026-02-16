@@ -122,18 +122,67 @@ eas build --profile preview --platform android
 
 When the build finishes, EAS gives you a download link (and QR code). Share that link; testers open it on their Android device and install the APK.
 
-**iOS**  
-Requires an [Apple Developer account](https://developer.apple.com/programs/) ($99/year). You can then run:
+**iOS (TestFlight)**  
+Requires an [Apple Developer account](https://developer.apple.com/programs/) ($99/year). Build for App Store Connect, then submit so the build appears in TestFlight:
 
 ```bash
-eas build --profile preview --platform ios
+eas build --profile production --platform ios
 ```
 
-Share the **TestFlight** link from the build page so testers can install the app on their iPhone or iPad.
+When the build finishes, submit it to App Store Connect:
+
+```bash
+eas submit --platform ios --latest
+```
+
+After Apple processes the build (typically 10–30 minutes), it appears in [App Store Connect](https://appstoreconnect.apple.com) → your app → **TestFlight**. Add the build to an internal (or external) tester group; testers install via the TestFlight app on their iPhone or iPad.
+
+### Pushing an update to the build (TestFlight)
+
+To push an update to testers, you create a new build and submit it, then add that build in TestFlight.
+
+**1. Build a new version**
+
+```bash
+eas build --profile production --platform ios
+```
+
+When prompted:
+- **Generate new Apple Distribution Certificate?** → **N** (reuse existing)
+- **Generate new Provisioning Profile?** → **N** (reuse existing)
+
+EAS will use the **remote** version source and bump the build number for you. Wait for the build to finish.
+
+**2. Submit to App Store Connect (for TestFlight)**
+
+```bash
+eas submit --platform ios --latest
+```
+
+When prompted:
+- **Generate new App Store Connect API Key?** → **N** (reuse existing)
+
+That uploads the new build to App Store Connect.
+
+**3. Wait for processing**
+
+Give it about 10–30 minutes. When the new build shows **"Ready to Submit"** in App Store Connect (and you get the email), it's ready for TestFlight.
+
+**4. Add the new build in TestFlight**
+
+1. App Store Connect → your app → **TestFlight**.
+2. Under **Internal Testing**, open your **group**.
+3. Click **Add Builds** (or the **+** next to Builds).
+4. Select the **new** build (the one you just submitted).
+5. Fill in "What to Test" and add it.
+
+Testers will see the new build in the TestFlight app and can install/update to it.
+
+**Summary:** Code change → `eas build --profile production --platform ios` → `eas submit --platform ios --latest` → wait for processing → add the new build to your TestFlight group. Reuse existing credentials (answer **N** to generating new cert/profile/API key) unless something's broken or expired.
 
 ### Build profiles
 
-The project’s `eas.json` defines profiles such as `development`, `preview`, and `production`. The **preview** profile is typically used for internal testing (e.g. Android APK, iOS ad-hoc/TestFlight).
+The project’s `eas.json` defines profiles such as `development`, `preview`, and `production`. The **preview** profile is used for internal testing (e.g. Android APK, iOS ad-hoc via link). The **production** profile is used for iOS TestFlight and App Store builds.
 
 ## Project Structure
 

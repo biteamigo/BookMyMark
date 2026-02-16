@@ -10,6 +10,7 @@ import {
   Platform,
   Linking,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import SearchBar from "../Components/SearchBar";
@@ -24,7 +25,12 @@ import Toast from "../Components/Toast";
 import { executeTransaction } from "../database/Database";
 import { useDebouncedValue } from "../Utils/useDebouncedValue";
 
+const GRID_COLUMN_WIDTH = 90;
+const GRID_NUM_COLUMNS = 3;
+const GRID_GAP = 42; // horizontal space between grid cells
+
 const FolderViewScreen = ({ navigation, route }) => {
+  const { width: screenWidth } = useWindowDimensions();
   // Get folderId from route params (null = root level)
   const currentFolderId = route.params?.folderId || null;
   const isRoot = currentFolderId === null;
@@ -364,13 +370,25 @@ const FolderViewScreen = ({ navigation, route }) => {
                 autoFocus={true}
               />
             ) : (
-              <Text
-                style={isGridView ? styles.folderTextGrid : styles.folderTextList}
-                numberOfLines={1}
-                ellipsizeMode="middle"
-              >
-                {item.name}
-              </Text>
+              isGridView ? (
+                <View style={styles.folderTextGridWrapper}>
+                  <Text
+                    style={styles.folderTextGrid}
+                    numberOfLines={1}
+                    ellipsizeMode="middle"
+                  >
+                    {item.name}
+                  </Text>
+                </View>
+              ) : (
+                <Text
+                  style={styles.folderTextList}
+                  numberOfLines={1}
+                  ellipsizeMode="middle"
+                >
+                  {item.name}
+                </Text>
+              )
             )}
           </TouchableOpacity>
         </View>
@@ -404,13 +422,15 @@ const FolderViewScreen = ({ navigation, route }) => {
                   color={bookmarkIcon.color}
                 />
               </View>
-              <Text
-                style={styles.bookmarkTextGrid}
-                numberOfLines={2}
-                ellipsizeMode="middle"
-              >
-                {item.name}
-              </Text>
+              <View style={styles.bookmarkTextGridWrapper}>
+                <Text
+                  style={styles.bookmarkTextGrid}
+                  numberOfLines={2}
+                  ellipsizeMode="middle"
+                >
+                  {item.name}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         );
@@ -483,7 +503,12 @@ const FolderViewScreen = ({ navigation, route }) => {
         horizontal={false}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContents}
+        contentContainerStyle={[
+          styles.listContents,
+          viewMode === 'grid' && {
+            paddingHorizontal: Math.max(0, (screenWidth - 2 * PAGE_MARGIN - GRID_NUM_COLUMNS * (GRID_COLUMN_WIDTH + GRID_GAP)) / 2),
+          },
+        ]}
         columnWrapperStyle={viewMode === 'grid' ? styles.columnWrapper : undefined}
         renderItem={renderItem}
         keyExtractor={(item) => `${item.type}-${item.id}`}
@@ -550,7 +575,7 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   columnWrapper: {
-    justifyContent: "space-around",
+    justifyContent: "flex-start",
   },
   selectedItem: {
     backgroundColor: "rgba(0, 122, 255, 0.1)",
@@ -565,12 +590,16 @@ const styles = StyleSheet.create({
   
   // Grid layout (root level)
   folderStyleGrid: {
-    flex: 1,
-    alignItems: "center",
+    width: GRID_COLUMN_WIDTH + GRID_GAP,
+    alignItems: "flex-start",
     paddingVertical: 20,
   },
   folderTouchableGrid: {
-    alignItems: "center",
+    alignItems: "flex-start",
+  },
+  folderTextGridWrapper: {
+    width: 90,
+    alignSelf: "flex-start",
   },
   folderTextGrid: {
     fontSize: 14,
@@ -617,27 +646,30 @@ const styles = StyleSheet.create({
   
   // Bookmark styles - Grid view
   bookmarkStyleGrid: {
-    flex: 1,
-    alignItems: "center",
+    width: GRID_COLUMN_WIDTH + GRID_GAP,
+    alignItems: "flex-start",
     paddingVertical: 20,
   },
   bookmarkTouchableGrid: {
-    alignItems: "center",
+    alignItems: "flex-start",
     width: '100%',
   },
   bookmarkIconGridWrapper: {
     width: 90,
     height: 90,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 5,
+  },
+  bookmarkTextGridWrapper: {
+    width: 90,
+    alignSelf: "flex-start",
   },
   bookmarkTextGrid: {
     fontSize: 14,
     textAlign: "center",
     color: "#333",
     paddingHorizontal: 4,
-    width: '100%',
   },
   
   // Bookmark styles - List view
