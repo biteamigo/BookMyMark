@@ -1,0 +1,15 @@
+# Create folder at root via bottom bar
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- assertVisible:
+    text: "New Folder"
+- tapOn:
+    text: "New Folder"
+- assertVisible:
+    text: "New Folder"
+# New folder appears with generated name like "New Folder" or "New Folder 1"; list refreshes
+- assertVisible:
+    text: "YouTube"
+- assertVisible:
+    text: "Music"

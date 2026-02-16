@@ -1,0 +1,72 @@
+# Duplicate URL: alert when creating or editing a bookmark with an existing URL
+# Self-contained: creates one bookmark then tries same URL on create and on edit
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Create first bookmark with URL
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "First Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://dup-url.example.com"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "First Bookmark"
+# Try to create second bookmark with same URL
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Second Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://dup-url.example.com"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Done"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "Duplicate URL"
+- assertVisible:
+    text: "already exists"
+- tapOn:
+    text: "Cancel"
+# Edit another bookmark to use the same URL
+- back
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Edit To Dup"
+- tapOn:
+    id: "url-input"
+- inputText: "https://other.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Edit To Dup"
+- tapOn:
+    text: "Edit"
+- tapOn:
+    id: "url-input"
+- inputText: "https://dup-url.example.com"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "Duplicate URL"
+- assertVisible:
+    text: "other bookmark"
+- tapOn:
+    text: "Cancel"

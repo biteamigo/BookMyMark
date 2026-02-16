@@ -1,0 +1,118 @@
+# Edit/Delete visible in selection mode; greyed when 0 selected; not greyed when 1; edit greyed when 2
+# Self-contained: uses seed folders; creates bookmarks in YouTube for 1 and 2 bookmark cases
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Selection mode: Edit and Delete shown in bar and menu
+- tapOn:
+    text: "Select"
+- assertVisible:
+    text: "Edit"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    id: "header-menu"
+- assertVisible:
+    text: "Edit"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    text: "Selected (0)"
+# 0 selected: assert visible (greyed is visual)
+- tapOn:
+    text: "Select"
+- assertVisible:
+    text: "Edit"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Selected (0)"
+# 1 folder selected: not greyed (seed)
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "Edit"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    id: "header-menu"
+- assertVisible:
+    text: "Edit"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    text: "Selected (1)"
+# 1 bookmark selected: create one in YouTube then assert
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "OneBm"
+- tapOn:
+    id: "url-input"
+- inputText: "https://onebm.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "OneBm"
+- assertVisible:
+    text: "Edit"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    id: "header-menu"
+- assertVisible:
+    text: "Edit"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    text: "Selected (1)"
+# 2 bookmarks: create another, then assert Edit greyed / Delete not
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "TwoBm"
+- tapOn:
+    id: "url-input"
+- inputText: "https://twobm.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "OneBm"
+- tapOn:
+    text: "TwoBm"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    id: "header-menu"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    text: "Selected (2)"
+# 2 folders: Edit greyed, Delete not (seed)
+- back
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Music"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    id: "header-menu"
+- assertVisible:
+    text: "Delete"
+- tapOn:
+    text: "Selected (2)"

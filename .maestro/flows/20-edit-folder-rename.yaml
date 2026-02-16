@@ -1,0 +1,21 @@
+# Rename folder via Edit; confirm saved
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- tapOn:
+    text: "Edit"
+# Inline edit: folder name becomes editable; type new name and submit (blur)
+- tapOn:
+    id: "folder-name-edit-input"
+- inputText: "Renamed Folder E2E"
+- tapOn:
+    text: "Select"
+- assertVisible:
+    text: "Renamed Folder E2E"

@@ -1,0 +1,44 @@
+# Multiple selection in root and subfolder; assert action bar count
+# Self-contained: seed folders at root; create one folder + one bookmark in YouTube for subfolder
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Root: select multiple folders (seed: YouTube, Music, Recipes)
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "Recipes"
+- assertVisible:
+    text: "Selected (3)"
+- tapOn:
+    text: "Selected (3)"
+# Subfolder: create one folder and one bookmark, then select both
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "MultiSelBookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://multisel.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- tapOn:
+    text: "MultiSelBookmark"
+- assertVisible:
+    text: "Selected (2)"
+- tapOn:
+    text: "Selected (2)"

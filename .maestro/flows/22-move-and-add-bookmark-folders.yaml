@@ -1,0 +1,68 @@
+# Move bookmark to another folder (only in new); add bookmark to another folder (in both)
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Create bookmark in YouTube to move
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Move Me"
+- tapOn:
+    id: "url-input"
+- inputText: "https://moveme.example.com"
+- tapOn:
+    text: "Save"
+# Move to Music: edit, pick only Music (deselect YouTube), save; verify not in YouTube, in Music
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Move Me"
+- tapOn:
+    text: "Edit"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "Done"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "Move Me"
+- back
+- assertVisible:
+    text: "YouTube"
+- assertVisible:
+    text: "No folders or bookmarks match"
+    optional: true
+- tapOn:
+    text: "Music"
+- assertVisible:
+    text: "Move Me"
+# Add existing bookmark to another folder: edit "Move Me", add Recipes, save; verify in Music and Recipes
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Move Me"
+- tapOn:
+    text: "Edit"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "Recipes"
+- tapOn:
+    text: "Done"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "Move Me"
+- back
+- tapOn:
+    text: "Recipes"
+- assertVisible:
+    text: "Move Me"

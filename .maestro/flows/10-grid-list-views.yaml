@@ -1,0 +1,30 @@
+# Grid and list views in root and in subfolder
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "List"
+- assertVisible:
+    text: "YouTube"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Grid"
+- assertVisible:
+    text: "YouTube"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Grid"
+- assertVisible:
+    text: "New Folder"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "List"
+- assertVisible:
+    text: "New Folder"

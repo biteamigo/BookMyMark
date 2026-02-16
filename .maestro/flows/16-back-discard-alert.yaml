@@ -1,0 +1,60 @@
+# Back from New Bookmark with Name or URL typed: discard alert (root and subfolder)
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Root: type in Name, back -> Discard alert
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Discard Name"
+- back
+- assertVisible:
+    text: "Discard Changes?"
+- assertVisible:
+    text: "Keep Editing"
+- assertVisible:
+    text: "Discard"
+- tapOn:
+    text: "Discard"
+- assertVisible:
+    text: "Search"
+# Root: type in URL, back -> Discard alert
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://discard.com"
+- back
+- assertVisible:
+    text: "Discard Changes?"
+- tapOn:
+    text: "Discard"
+# Subfolder: type in URL, back -> Discard alert, then same subfolder
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://sub.com"
+- back
+- assertVisible:
+    text: "Discard Changes?"
+- tapOn:
+    text: "Discard"
+- assertVisible:
+    text: "YouTube"
+# Subfolder: type in Name, back -> Discard alert
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Sub Name"
+- back
+- assertVisible:
+    text: "Discard Changes?"
+- tapOn:
+    text: "Discard"
+- assertVisible:
+    text: "YouTube"

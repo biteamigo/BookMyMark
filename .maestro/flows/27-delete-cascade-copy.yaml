@@ -1,0 +1,36 @@
+# Delete folder: assert Confirm Delete dialog shows cascade warning text
+# Self-contained: creates a folder with content then deletes it
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Create folder at root with content (child folder or bookmark)
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Inside Cascade"
+- tapOn:
+    id: "url-input"
+- inputText: "https://cascade.example.com"
+- tapOn:
+    text: "Save"
+- back
+# Select the parent folder at root and tap Delete
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- tapOn:
+    text: "Delete"
+- assertVisible:
+    text: "Confirm Delete"
+- assertVisible:
+    text: "This will also delete any content in the selected folder(s)."
+- tapOn:
+    text: "Cancel"

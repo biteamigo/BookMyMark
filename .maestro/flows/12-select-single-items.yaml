@@ -1,0 +1,90 @@
+# Select single folder (root grid/list), single folder (subfolder grid/list), single bookmark (subfolder list/grid)
+# Self-contained: uses seed folders + creates one folder and one bookmark in YouTube
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Root grid: select one folder (seed)
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "Selected (1)"
+- tapOn:
+    text: "Selected (1)"
+# Root list: select one folder
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "List"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Music"
+- assertVisible:
+    text: "Selected (1)"
+- tapOn:
+    text: "Selected (1)"
+# Subfolder: create one folder and one bookmark so we can select them
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Grid"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "SelBookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://sel.example.com"
+- tapOn:
+    text: "Save"
+# Subfolder grid: select the new folder
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- assertVisible:
+    text: "Selected (1)"
+- tapOn:
+    text: "Selected (1)"
+# Subfolder list: select the new folder
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "List"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- assertVisible:
+    text: "Selected (1)"
+- tapOn:
+    text: "Selected (1)"
+# Subfolder list: select bookmark
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "SelBookmark"
+- assertVisible:
+    text: "Selected (1)"
+- tapOn:
+    text: "Selected (1)"
+# Subfolder grid: select bookmark
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Grid"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "SelBookmark"
+- assertVisible:
+    text: "Selected (1)"

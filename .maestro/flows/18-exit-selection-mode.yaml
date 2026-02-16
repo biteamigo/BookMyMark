@@ -1,0 +1,25 @@
+# Exit selection mode via "Selected" in bottom bar and in dropdown
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "Selected (1)"
+- tapOn:
+    text: "Selected (1)"
+- assertVisible:
+    text: "Select"
+- assertVisible:
+    text: "New Folder"
+# Via dropdown
+- tapOn:
+    text: "Select"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Selected (1)"
+- assertVisible:
+    text: "Select"

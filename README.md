@@ -203,6 +203,7 @@ Flows live in `.maestro/flows/`. The app ID and inclusion patterns are in `.maes
 
 ### Android E2E testing (Maestro)
 
+**Manual steps**  
 Follow these steps to run Maestro E2E tests on an Android emulator. All commands are run from the **project root** (`BookMyMark/`).
 
 **1. Install Android Studio**
@@ -264,11 +265,45 @@ maestro test .maestro/
 
 Maestro will launch the app on the emulator, run the flows in `.maestro/flows/`, and report results.
 
+**7. Run a single flow**
+
+To run only one flow (e.g. the root screen flow):
+
+```bash
+maestro test .maestro/flows/01-root-screen.yaml
+```
+
+**8. Run tests on multiple emulators simultaneously**
+
+With three (or more) Android emulators running, you can run the same flows in parallel on all of them. Ensure at least 3 devices are booted (e.g. `adb devices` shows 3), then:
+
+```bash
+maestro test --shard-all 3 .maestro/
+```
+
+Maestro runs the same tests on each of the 3 devices in parallel. Useful for checking behavior across different API levels or screen sizes; see the Maestro docs for `--shard-split` to distribute different flows across devices instead.
+
 **Ongoing workflow**
 
 - **After JS/React-only changes:** You do **not** need to run `npx expo run:android` again. Keep Metro running and run `maestro test .maestro/` whenever you want to re-run E2E tests.
 - **After native/Android or `app.json` changes:** Run `npx expo run:android` again to rebuild and reinstall, then run Metro and Maestro as above.
-- To run a single flow: `maestro test .maestro/flows/01-root-screen.yaml`
+
+**Quick run (all-in-one script)**  
+From the project root you can run a script that starts the emulator, installs the app, starts Metro, and runs Maestro. By default it uses the **Pixel_9_Pro_XL_2** AVD.
+
+```bash
+npm run e2e:android
+```
+
+Or run the script directly:
+
+- **Default (all flows, Pixel_9_Pro_XL_2):** `./scripts/e2e-android.sh`
+- **Another AVD:** `./scripts/e2e-android.sh --avd MyAVDName`
+- **Subset of flows:** `./scripts/e2e-android.sh .maestro/flows/01-root-screen.yaml`
+- **Other AVD + subset:** `./scripts/e2e-android.sh --avd MyAVD .maestro/flows/01-root-screen.yaml`
+
+Ensure the AVD exists (e.g. in Android Studio → Device Manager) and that no other instance of that AVD is already running. The script stops Metro and the emulator automatically when the run finishes.
+
 
 ## EAS Build (Android & iOS)
 

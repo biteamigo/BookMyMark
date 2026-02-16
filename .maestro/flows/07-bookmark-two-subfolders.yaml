@@ -1,0 +1,33 @@
+# Create bookmark in one subfolder and also select another in picker; verify in both
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "folder-picker-button"
+- assertVisible:
+    text: "Select Folders"
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "Done"
+- tapOn:
+    id: "name-input"
+- inputText: "E2E Two Folders Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://e2e-two.example.com"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "E2E Two Folders Bookmark"
+- back
+- assertVisible:
+    text: "Music"
+- tapOn:
+    text: "Music"
+- assertVisible:
+    text: "E2E Two Folders Bookmark"

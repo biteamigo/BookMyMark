@@ -1,0 +1,69 @@
+# Create folder from Folder Picker (at root and inside another folder); new folder contains the bookmark
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# From root: New Bookmark, open picker, create folder at root, select it, create bookmark, verify
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "folder-picker-button"
+- assertVisible:
+    text: "Create New Folder"
+- tapOn:
+    text: "Create New Folder"
+- tapOn:
+    id: "new-folder-input"
+- inputText: "E2E Picker Root Folder"
+- tapOn:
+    text: "Create"
+- tapOn:
+    text: "Done"
+- tapOn:
+    id: "name-input"
+- inputText: "Bookmark In New Root Folder"
+- tapOn:
+    id: "url-input"
+- inputText: "https://picker-root.example.com"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "E2E Picker Root Folder"
+- tapOn:
+    text: "E2E Picker Root Folder"
+- assertVisible:
+    text: "Bookmark In New Root Folder"
+# Create subfolder from picker (inside another folder)
+- back
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "Create New Folder"
+- tapOn:
+    id: "new-folder-input"
+- inputText: "E2E Picker Sub Folder"
+- tapOn:
+    text: "Root (Top Level)"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Create"
+- tapOn:
+    text: "Done"
+- tapOn:
+    id: "name-input"
+- inputText: "Bookmark In Picker Sub"
+- tapOn:
+    id: "url-input"
+- inputText: "https://picker-sub.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "E2E Picker Sub Folder"
+- tapOn:
+    text: "E2E Picker Sub Folder"
+- assertVisible:
+    text: "Bookmark In Picker Sub"

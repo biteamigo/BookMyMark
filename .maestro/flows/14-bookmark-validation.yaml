@@ -1,0 +1,100 @@
+# Bookmark validation: no name, no URL, no folder; optional tag; multiple tags
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# 1. Cannot save without name (URL + folder only)
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://noname.example.com"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Done"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "Bookmark name is required"
+- back
+# 2. Cannot save without URL (name + folder only)
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "No URL Bookmark"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "Recipes"
+- tapOn:
+    text: "Done"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "URL is required"
+- back
+# 3. Cannot save without folder (name + URL only, from root)
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "No Folder Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://nofolder.example.com"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "Please select at least one folder"
+- back
+# 4. Can create without tag
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "No Tag Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://notag.example.com"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "Recipes"
+- tapOn:
+    text: "Done"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "No Tag Bookmark"
+# 5. Can create with multiple tags
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Multi Tag Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://multi-tag.example.com"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "Done"
+- tapOn:
+    text: "Add tags..."
+- inputText: "tag1"
+- tapOn:
+    text: "tag1"
+- inputText: "tag2"
+- tapOn:
+    text: "tag2"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Music"
+- assertVisible:
+    text: "Multi Tag Bookmark"

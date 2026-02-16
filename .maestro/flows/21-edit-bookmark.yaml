@@ -1,0 +1,60 @@
+# Edit bookmark: name, URL, add/delete tags, move to another folder, add to another folder
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Create a bookmark to edit
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Edit Me Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://editme.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Edit Me Bookmark"
+- tapOn:
+    text: "Edit"
+# Edit name
+- tapOn:
+    id: "name-input"
+- inputText: "Edited Name Bookmark"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "Edited Name Bookmark"
+- tapOn:
+    text: "Edited Name Bookmark"
+- tapOn:
+    text: "Edit"
+# Edit URL
+- tapOn:
+    id: "url-input"
+- inputText: "https://edited-url.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Edit"
+# Add tags
+- tapOn:
+    text: "Add tags..."
+- inputText: "e2e-tag"
+- tapOn:
+    text: "e2e-tag"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Edited Name Bookmark"
+- tapOn:
+    text: "Edit"
+# Delete tag (remove the chip)
+- tapOn:
+    text: "e2e-tag"
+- tapOn:
+    text: "Save"

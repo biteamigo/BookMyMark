@@ -1,0 +1,116 @@
+# Delete: 1 folder root, 2 folders root, 1 bookmark subfolder, 2 bookmarks, 1 folder + 1 bookmark
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Ensure we have a folder to delete at root: create one
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- tapOn:
+    text: "Delete"
+- assertVisible:
+    text: "Confirm Delete"
+- tapOn:
+    text: "Delete"
+- assertVisible:
+    text: "deleted"
+# Delete 2 folders at root: create two then delete both
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- tapOn:
+    text: "New Folder"
+    index: 1
+- tapOn:
+    text: "Delete"
+- tapOn:
+    text: "Delete"
+# Subfolder: need a bookmark - create one then delete
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "To Delete Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://todelete.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "To Delete Bookmark"
+- tapOn:
+    text: "Delete"
+- tapOn:
+    text: "Delete"
+# Delete 2 bookmarks: create two in Music then delete both
+- back
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Del B1"
+- tapOn:
+    id: "url-input"
+- inputText: "https://delb1.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Del B2"
+- tapOn:
+    id: "url-input"
+- inputText: "https://delb2.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Del B1"
+- tapOn:
+    text: "Del B2"
+- tapOn:
+    text: "Delete"
+- tapOn:
+    text: "Delete"
+# Delete 1 folder + 1 bookmark in subfolder
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "Del B3"
+- tapOn:
+    id: "url-input"
+- inputText: "https://delb3.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- tapOn:
+    text: "Del B3"
+- tapOn:
+    text: "Delete"
+- tapOn:
+    text: "Delete"

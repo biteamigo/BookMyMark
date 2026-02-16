@@ -1,0 +1,30 @@
+# Navigate root -> subfolder -> subfolder (2 levels), verify headers and back
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- assertVisible:
+    text: "YouTube"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "YouTube"
+- assertVisible:
+    text: "New Folder"
+# Create a child folder to get 2 levels deep
+- tapOn:
+    text: "New Folder"
+- assertVisible:
+    text: "New Folder"
+- tapOn:
+    text: "New Folder"
+# Now we're in depth 2; header should show folder name (the new folder we just opened)
+- assertVisible:
+    text: "New Folder"
+- back
+- assertVisible:
+    text: "YouTube"
+- back
+- assertVisible:
+    text: "Search"
+- assertVisible:
+    text: "Music"

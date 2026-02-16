@@ -1,0 +1,44 @@
+# From a folder: search for subfolder/bookmark/tag that is NOT under current folder - no results
+# Self-contained: creates bookmark only in Music, then from YouTube searches (no match)
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Create bookmark only in Music (so from YouTube it's "non-parent")
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "OnlyInMusic"
+- tapOn:
+    id: "url-input"
+- inputText: "https://onlyinmusic.example.com"
+- tapOn:
+    text: "Add tags..."
+- inputText: "onlymusic"
+- tapOn:
+    text: "onlymusic"
+- tapOn:
+    text: "Save"
+- back
+# From YouTube: search "Recipes" (sibling root folder - not under YouTube)
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Search"
+- inputText: "Recipes"
+- assertVisible:
+    text: "No folders or bookmarks match"
+# From YouTube: search bookmark that exists only in Music
+- tapOn:
+    text: "Search"
+- inputText: "OnlyInMusic"
+- assertVisible:
+    text: "No folders or bookmarks match"
+# From YouTube: search tag that exists only in Music
+- tapOn:
+    text: "Search"
+- inputText: "onlymusic"
+- assertVisible:
+    text: "No folders or bookmarks match"

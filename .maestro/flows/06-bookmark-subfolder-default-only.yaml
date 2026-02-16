@@ -1,0 +1,21 @@
+# Create bookmark in subfolder with only default (current) folder selected
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- assertVisible:
+    text: "New Bookmark"
+# From subfolder, current folder is pre-selected (folder name shown). Do not open picker.
+- tapOn:
+    id: "name-input"
+- inputText: "E2E Default Folder Bookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://e2e-default.example.com"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "E2E Default Folder Bookmark"

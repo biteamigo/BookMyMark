@@ -1,0 +1,18 @@
+# Confirm all menu options visible in dropdown (root)
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- assertVisible:
+    text: "Search"
+- tapOn:
+    id: "header-menu"
+- assertVisible:
+    text: "Select"
+- assertVisible:
+    text: "New Folder"
+- assertVisible:
+    text: "New Bookmark"
+- assertVisible:
+    text: "Grid"
+- assertVisible:
+    text: "List"

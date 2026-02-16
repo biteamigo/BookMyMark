@@ -1,0 +1,13 @@
+# Create folder inside a subfolder
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "New Folder"
+- tapOn:
+    text: "New Folder"
+# New folder appears in list under YouTube
+- assertVisible:
+    text: "New Folder"

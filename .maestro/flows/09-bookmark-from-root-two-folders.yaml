@@ -1,0 +1,31 @@
+# From root: New Bookmark, add 2 folders, create; verify bookmark in both subfolders
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "Done"
+- tapOn:
+    id: "name-input"
+- inputText: "E2E Root Two Folders"
+- tapOn:
+    id: "url-input"
+- inputText: "https://e2e-root-two.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "E2E Root Two Folders"
+- back
+- tapOn:
+    text: "Music"
+- assertVisible:
+    text: "E2E Root Two Folders"

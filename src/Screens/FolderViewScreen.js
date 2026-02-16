@@ -370,6 +370,7 @@ const FolderViewScreen = ({ navigation, route }) => {
             />
             {isEditing ? (
               <TextInput
+                testID="folder-name-edit-input"
                 ref={inputRef}
                 style={styles.editingInput}
                 value={editingName}

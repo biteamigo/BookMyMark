@@ -1,0 +1,62 @@
+# Enter selection mode from bottom bar and from dropdown (root grid/list, subfolder grid/list)
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Root, grid: enter via bottom bar
+- tapOn:
+    text: "Select"
+- assertVisible:
+    text: "Selected (0)"
+- tapOn:
+    text: "Selected (0)"
+# Root, grid: enter via menu
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Select"
+- assertVisible:
+    text: "Selected (0)"
+- tapOn:
+    text: "Selected (0)"
+# Root, list: enter via bar then menu
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "List"
+- tapOn:
+    text: "Select"
+- assertVisible:
+    text: "Edit"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Selected (0)"
+- tapOn:
+    text: "Selected (0)"
+# Subfolder, grid then list
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Grid"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Select"
+- assertVisible:
+    text: "Selected (0)"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Selected (0)"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "List"
+- tapOn:
+    text: "Select"
+- assertVisible:
+    text: "Edit"
+- tapOn:
+    id: "header-menu"
+- tapOn:
+    text: "Selected (0)"

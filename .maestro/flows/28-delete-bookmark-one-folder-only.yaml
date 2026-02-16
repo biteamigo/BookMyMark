@@ -1,0 +1,48 @@
+# Delete a bookmark that is in multiple folders from one folder only; confirm still in other folders
+# Self-contained: creates bookmark in YouTube and Music, deletes from YouTube, asserts still in Music
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Create bookmark in both YouTube and Music
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "Done"
+- tapOn:
+    id: "name-input"
+- inputText: "MultiFolderBookmark"
+- tapOn:
+    id: "url-input"
+- inputText: "https://multifolder.example.com"
+- tapOn:
+    text: "Save"
+- assertVisible:
+    text: "MultiFolderBookmark"
+# Delete from current folder (YouTube) only
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "MultiFolderBookmark"
+- tapOn:
+    text: "Delete"
+- tapOn:
+    text: "Delete"
+- assertVisible:
+    text: "deleted"
+# Confirm we're still in YouTube (bookmark removed from this folder)
+- assertVisible:
+    text: "Select"
+# Navigate to Music and confirm bookmark still there
+- back
+- tapOn:
+    text: "Music"
+- assertVisible:
+    text: "MultiFolderBookmark"

@@ -19,6 +19,7 @@ const EllipsisMenuButton = ({
   return (
     <View>
       <TouchableOpacity
+        testID="header-menu"
         style={styles.button}
         onPress={() => setMenuVisible(true)}
       >

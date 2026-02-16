@@ -1,0 +1,20 @@
+# Back from New Bookmark without typing: no discard alert (root and subfolder)
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# From root: open New Bookmark, do not type, back
+- tapOn:
+    text: "New Bookmark"
+- assertVisible:
+    text: "New Bookmark"
+- back
+- assertVisible:
+    text: "Search"
+# From subfolder: open New Bookmark, do not type, back; confirm we're in same subfolder
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Bookmark"
+- back
+- assertVisible:
+    text: "YouTube"

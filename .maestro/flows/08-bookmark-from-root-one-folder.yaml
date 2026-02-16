@@ -1,0 +1,26 @@
+# From root: New Bookmark with no default folder; add one folder; create; verify in that folder
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+- tapOn:
+    text: "New Bookmark"
+- assertVisible:
+    text: "Tap to select folders..."
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Done"
+- tapOn:
+    id: "name-input"
+- inputText: "E2E Root One Folder"
+- tapOn:
+    id: "url-input"
+- inputText: "https://e2e-root-one.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "E2E Root One Folder"

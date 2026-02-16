@@ -1,0 +1,98 @@
+# Search folder/bookmark/tag from root and from parent folder
+# Self-contained: creates subfolder, bookmarks, and tag then runs all searches
+appId: com.biteamigo.BookMyMark
+---
+- launchApp
+# Create data: subfolder in YouTube, bookmark in it, bookmark with tag in Music
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "New Folder"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "SearchSub"
+- tapOn:
+    id: "url-input"
+- inputText: "https://searchsub.example.com"
+- tapOn:
+    text: "Save"
+- tapOn:
+    text: "New Folder"
+    index: 0
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "SearchBook"
+- tapOn:
+    id: "url-input"
+- inputText: "https://searchbook.example.com"
+- tapOn:
+    text: "Save"
+- back
+- tapOn:
+    text: "Music"
+- tapOn:
+    text: "New Bookmark"
+- tapOn:
+    id: "name-input"
+- inputText: "TagBook"
+- tapOn:
+    id: "url-input"
+- inputText: "https://tagbook.example.com"
+- tapOn:
+    text: "Add tags..."
+- inputText: "searchtag"
+- tapOn:
+    text: "searchtag"
+- tapOn:
+    text: "Save"
+- back
+# From root: search folder by name (seed)
+- tapOn:
+    text: "Search"
+- inputText: "You"
+- assertVisible:
+    text: "YouTube"
+- tapOn:
+    text: "Search"
+- inputText: "Music"
+- assertVisible:
+    text: "Music"
+# From root: search bookmark by name
+- tapOn:
+    text: "Search"
+- inputText: "SearchBook"
+- assertVisible:
+    text: "SearchBook"
+# From root: search bookmark by tag
+- tapOn:
+    text: "Search"
+- inputText: "searchtag"
+- assertVisible:
+    text: "TagBook"
+# From parent (YouTube): search subfolder by name (the subfolder we created is "New Folder")
+- tapOn:
+    text: "Search"
+- inputText: ""
+- tapOn:
+    text: "YouTube"
+- tapOn:
+    text: "Search"
+- inputText: "New Folder"
+- assertVisible:
+    text: "New Folder"
+# From parent: search bookmark by name
+- tapOn:
+    text: "Search"
+- inputText: "SearchBook"
+- assertVisible:
+    text: "SearchBook"
+# From parent: search bookmark by tag
+- tapOn:
+    text: "Search"
+- inputText: "searchtag"
+- assertVisible:
+    text: "TagBook"
