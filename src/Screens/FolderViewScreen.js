@@ -24,13 +24,20 @@ import { getIconForUrl } from "../Utils/IconMapper";
 import Toast from "../Components/Toast";
 import { executeTransaction } from "../database/Database";
 import { useDebouncedValue } from "../Utils/useDebouncedValue";
-
-const GRID_COLUMN_WIDTH = 90;
-const GRID_NUM_COLUMNS = 3;
-const GRID_GAP = 42; // horizontal space between grid cells
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  getGridNumColumns,
+  GRID_COLUMN_WIDTH,
+  GRID_GAP,
+  GRID_SIDE_MARGIN,
+  GRID_LIST_PADDING,
+  SEARCH_BAR_HEIGHT,
+  BOTTOM_BAR_OFFSET,
+} from "../Utils/layoutUtils";
 
 const FolderViewScreen = ({ navigation, route }) => {
   const { width: screenWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   // Get folderId from route params (null = root level)
   const currentFolderId = route.params?.folderId || null;
   const isRoot = currentFolderId === null;
@@ -48,6 +55,9 @@ const FolderViewScreen = ({ navigation, route }) => {
   
   // View mode: 'grid' or 'list' - default based on folder level
   const [viewMode, setViewMode] = useState(isRoot ? 'grid' : 'list');
+  const gridContentWidth = screenWidth - 2 * GRID_SIDE_MARGIN;
+  const gridNumColumns = getGridNumColumns(gridContentWidth);
+  const gridRowWidth = gridContentWidth - 2 * GRID_LIST_PADDING;
   
   // Selection mode state
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -125,7 +135,7 @@ const FolderViewScreen = ({ navigation, route }) => {
         setSelection({ start: 0, end: folder.name.length });
         
         // Scroll to show the edited folder
-        const numColumns = viewMode === 'grid' ? 3 : 1;
+        const numColumns = viewMode === 'grid' ? gridNumColumns : 1;
         const rowIndex = viewMode === 'grid' ? Math.floor(folderIndex / numColumns) : folderIndex;
         
         setTimeout(() => {
@@ -332,7 +342,10 @@ const FolderViewScreen = ({ navigation, route }) => {
     
     if (item.type === 'folder') {
       return (
-        <View style={isGridView ? styles.folderStyleGrid : styles.folderStyleList}>
+        <View style={[
+            isGridView ? styles.folderStyleGrid : styles.folderStyleList,
+            isGridView && { width: gridRowWidth / gridNumColumns },
+          ]}>
           <TouchableOpacity
             style={[
               isGridView ? styles.folderTouchableGrid : styles.folderTouchableList,
@@ -400,7 +413,7 @@ const FolderViewScreen = ({ navigation, route }) => {
       
       if (isGridView) {
         return (
-          <View style={styles.bookmarkStyleGrid}>
+          <View style={[styles.bookmarkStyleGrid, { width: gridRowWidth / gridNumColumns }]}>
             <TouchableOpacity
               testID={`bookmark-item-${item.id}`}
               style={[styles.bookmarkTouchableGrid, isSelected && styles.selectedItem]}
@@ -491,22 +504,30 @@ const FolderViewScreen = ({ navigation, route }) => {
 
   return (
     <KeyboardAvoidingView
-      style={globalStyles.pageView}
+      style={[
+        globalStyles.pageView,
+        viewMode === 'grid' && { marginHorizontal: GRID_SIDE_MARGIN },
+      ]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={100}
     >
       <FlatList
+        testID="folder-list-flatlist"
         ref={flatListRef}
         data={items}
-        numColumns={viewMode === 'grid' ? 3 : 1}
+        numColumns={viewMode === 'grid' ? gridNumColumns : 1}
         key={viewMode}
         horizontal={false}
         showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContents,
+          {
+            paddingTop: SEARCH_BAR_HEIGHT,
+            paddingBottom: insets.bottom + BOTTOM_BAR_OFFSET,
+          },
           viewMode === 'grid' && {
-            paddingHorizontal: Math.max(0, (screenWidth - 2 * PAGE_MARGIN - GRID_NUM_COLUMNS * (GRID_COLUMN_WIDTH + GRID_GAP)) / 2),
+            paddingHorizontal: GRID_LIST_PADDING,
           },
         ]}
         columnWrapperStyle={viewMode === 'grid' ? styles.columnWrapper : undefined}
@@ -526,7 +547,12 @@ const FolderViewScreen = ({ navigation, route }) => {
         }
       />
       
-      <View style={styles.searchBarContainer}>
+      <View
+        style={[
+          styles.searchBarContainer,
+          viewMode === 'grid' && { marginHorizontal: PAGE_MARGIN - GRID_SIDE_MARGIN },
+        ]}
+      >
         <SearchBar
           searchTerm={searchTerm}
           onSearchTermChange={setSearchTerm}
@@ -562,8 +588,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   listContents: {
-    paddingTop: 60,
-    paddingBottom: 100,
+    // paddingTop and paddingBottom set dynamically with safe area insets
   },
   emptySearchContainer: {
     paddingVertical: 24,

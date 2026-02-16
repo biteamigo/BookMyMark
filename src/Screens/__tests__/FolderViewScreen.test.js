@@ -1,6 +1,6 @@
 import React from "react";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react-native";
-import { Alert, Linking } from "react-native";
+import { Alert, Linking, FlatList } from "react-native";
 import FolderViewScreen from "../FolderViewScreen";
 import { DatabaseProvider } from "../../Context/DatabaseContext";
 import { FolderProvider } from "../../Context/FolderContext";
@@ -8,6 +8,26 @@ import { getDatabase } from "../../database/Database";
 
 jest.spyOn(Alert, 'alert');
 jest.spyOn(Linking, 'openURL').mockImplementation(() => Promise.resolve());
+
+jest.mock("../../Utils/layoutUtils", () => {
+  const actual = jest.requireActual("../../Utils/layoutUtils");
+  return {
+    ...actual,
+    getGridNumColumns: jest.fn(actual.getGridNumColumns),
+  };
+});
+
+// Override safe area mock so we can test inset application
+const mockUseSafeAreaInsets = jest.fn(() => ({ top: 0, bottom: 0, left: 0, right: 0 }));
+jest.mock("react-native-safe-area-context", () => ({
+  SafeAreaProvider: ({ children }) => children,
+  SafeAreaView: ({ children, style }) => {
+    const R = require("react");
+    const { View } = require("react-native");
+    return R.createElement(View, { style }, children);
+  },
+  useSafeAreaInsets: () => mockUseSafeAreaInsets(),
+}));
 
 // Mock navigation
 const mockNavigate = jest.fn();
@@ -39,6 +59,7 @@ describe("FolderViewScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Linking.openURL.mockImplementation(() => Promise.resolve());
+    mockUseSafeAreaInsets.mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 });
   });
 
   describe("Root level (folderId: null)", () => {
@@ -577,4 +598,49 @@ describe("FolderViewScreen", () => {
     });
   });
 
+  describe("Safe area", () => {
+    it("applies bottom safe area inset to list padding so content stays above home indicator", () => {
+      mockUseSafeAreaInsets.mockReturnValue({ top: 47, bottom: 34, left: 0, right: 0 });
+      renderWithProviders();
+      const flatList = screen.getByTestId("folder-list-flatlist");
+      const style = flatList.props.contentContainerStyle;
+      const merged = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+      expect(merged.paddingTop).toBe(50); // SEARCH_BAR_HEIGHT only (no top inset to avoid gap under header)
+      expect(merged.paddingBottom).toBe(34 + 100); // insets.bottom + BOTTOM_BAR_OFFSET
+    });
+
+    it("uses zero bottom inset when on device without home indicator", () => {
+      mockUseSafeAreaInsets.mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 });
+      renderWithProviders();
+      const flatList = screen.getByTestId("folder-list-flatlist");
+      const style = flatList.props.contentContainerStyle;
+      const merged = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;
+      expect(merged.paddingTop).toBe(50);
+      expect(merged.paddingBottom).toBe(100);
+    });
+  });
+
+  describe("Responsive grid", () => {
+    it("uses 2 columns in grid view when getGridNumColumns returns 2", () => {
+      const layoutUtils = require("../../Utils/layoutUtils");
+      layoutUtils.getGridNumColumns.mockReturnValue(2);
+      const { UNSAFE_root } = renderWithProviders();
+      const flatListInst = UNSAFE_root.findAllByType(FlatList)[0];
+      expect(flatListInst.props.numColumns).toBe(2);
+    });
+
+    it("uses 3 columns in grid view when getGridNumColumns returns 3", () => {
+      const layoutUtils = require("../../Utils/layoutUtils");
+      layoutUtils.getGridNumColumns.mockReturnValue(3);
+      const { UNSAFE_root } = renderWithProviders();
+      const flatListInst = UNSAFE_root.findAllByType(FlatList)[0];
+      expect(flatListInst.props.numColumns).toBe(3);
+    });
+
+    it("uses 1 column in list view (subfolder) regardless of grid columns", () => {
+      const { UNSAFE_root } = renderWithProviders({ route: { params: { folderId: "some-id" } } });
+      const flatListInst = UNSAFE_root.findAllByType(FlatList)[0];
+      expect(flatListInst.props.numColumns).toBe(1);
+    });
+  });
 });
