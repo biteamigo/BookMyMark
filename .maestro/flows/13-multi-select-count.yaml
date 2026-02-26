@@ -22,6 +22,10 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "New Folder"
 - tapOn:
+    text: "Select"
+- tapOn:
+    text: "Selected (0)"
+- tapOn:
     text: "New Bookmark"
 - tapOn:
     id: "name-input"
@@ -34,8 +38,7 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "Select"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    id: "folder-item-New-Folder"
 - tapOn:
     text: "MultiSelBookmark"
 - assertVisible:

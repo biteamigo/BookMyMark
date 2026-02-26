@@ -25,6 +25,6 @@ appId: com.biteamigo.BookMyMark
     text: "YouTube"
 - back
 - assertVisible:
-    text: "Search"
+    text: "Select"
 - assertVisible:
     text: "Music"

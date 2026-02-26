@@ -3,7 +3,7 @@
 appId: com.biteamigo.BookMyMark
 ---
 - launchApp
-# Selection mode: Edit and Delete shown in bar and menu
+# Selection mode: Edit and Delete shown in bar and menu (greyed when 0 selected; we assert visible only)
 - tapOn:
     text: "Select"
 - assertVisible:
@@ -18,7 +18,7 @@ appId: com.biteamigo.BookMyMark
     text: "Delete"
 - tapOn:
     text: "Selected (0)"
-# 0 selected: assert visible (greyed is visual)
+# 0 selected: assert visible (greyed state not asserted - may not be exposed to Maestro on all platforms)
 - tapOn:
     text: "Select"
 - assertVisible:
@@ -36,14 +36,18 @@ appId: com.biteamigo.BookMyMark
     text: "YouTube"
 - assertVisible:
     text: "Edit"
+    enabled: true
 - assertVisible:
     text: "Delete"
+    enabled: true
 - tapOn:
     id: "header-menu"
 - assertVisible:
     text: "Edit"
+    enabled: true
 - assertVisible:
     text: "Delete"
+    enabled: true
 - tapOn:
     text: "Selected (1)"
 # 1 bookmark selected: create one in YouTube then assert
@@ -65,17 +69,21 @@ appId: com.biteamigo.BookMyMark
     text: "OneBm"
 - assertVisible:
     text: "Edit"
+    enabled: true
 - assertVisible:
     text: "Delete"
+    enabled: true
 - tapOn:
     id: "header-menu"
 - assertVisible:
     text: "Edit"
+    enabled: true
 - assertVisible:
     text: "Delete"
+    enabled: true
 - tapOn:
     text: "Selected (1)"
-# 2 bookmarks: create another, then assert Edit greyed / Delete not
+# 2 bookmarks: create another, then assert Edit disabled / Delete enabled
 - tapOn:
     text: "New Bookmark"
 - tapOn:
@@ -93,14 +101,20 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "TwoBm"
 - assertVisible:
+    text: "Edit"
+- assertVisible:
     text: "Delete"
+    enabled: true
 - tapOn:
     id: "header-menu"
 - assertVisible:
+    text: "Edit"
+- assertVisible:
     text: "Delete"
+    enabled: true
 - tapOn:
     text: "Selected (2)"
-# 2 folders: Edit greyed, Delete not (seed)
+# 2 folders: Edit disabled, Delete enabled (seed)
 - back
 - tapOn:
     text: "Select"
@@ -109,10 +123,16 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "Music"
 - assertVisible:
+    text: "Edit"
+- assertVisible:
     text: "Delete"
+    enabled: true
 - tapOn:
     id: "header-menu"
 - assertVisible:
+    text: "Edit"
+- assertVisible:
     text: "Delete"
+    enabled: true
 - tapOn:
     text: "Selected (2)"

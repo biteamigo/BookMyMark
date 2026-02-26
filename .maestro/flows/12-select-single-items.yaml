@@ -33,7 +33,11 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "YouTube"
 - tapOn:
-    text: "New Folder"
+    id: "new-folder-button"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Selected (0)"
 - tapOn:
     text: "New Bookmark"
 - tapOn:
@@ -48,8 +52,7 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "Select"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    id: "folder-item-New-Folder"
 - assertVisible:
     text: "Selected (1)"
 - tapOn:
@@ -62,8 +65,7 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "Select"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    id: "folder-item-New-Folder"
 - assertVisible:
     text: "Selected (1)"
 - tapOn:

@@ -19,8 +19,7 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "Save"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    id: "new-folder-button"
 - tapOn:
     text: "New Bookmark"
 - tapOn:
@@ -46,7 +45,7 @@ appId: com.biteamigo.BookMyMark
     text: "Add tags..."
 - inputText: "searchtag"
 - tapOn:
-    text: "searchtag"
+    id: "add-tag-button"
 - tapOn:
     text: "Save"
 - back
@@ -58,41 +57,97 @@ appId: com.biteamigo.BookMyMark
     text: "YouTube"
 - tapOn:
     text: "Search"
+- longPressOn:
+    id: "search-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - inputText: "Music"
 - assertVisible:
     text: "Music"
 # From root: search bookmark by name
 - tapOn:
     text: "Search"
+- longPressOn:
+    id: "search-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - inputText: "SearchBook"
 - assertVisible:
     text: "SearchBook"
 # From root: search bookmark by tag
 - tapOn:
     text: "Search"
+- longPressOn:
+    id: "search-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - inputText: "searchtag"
 - assertVisible:
     text: "TagBook"
+
 # From parent (YouTube): search subfolder by name (the subfolder we created is "New Folder")
 - tapOn:
     text: "Search"
-- inputText: ""
+- longPressOn:
+    id: "search-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - tapOn:
     text: "YouTube"
 - tapOn:
     text: "Search"
+- longPressOn:
+    id: "search-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - inputText: "New Folder"
 - assertVisible:
     text: "New Folder"
 # From parent: search bookmark by name
 - tapOn:
     text: "Search"
+- longPressOn:
+    id: "search-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - inputText: "SearchBook"
 - assertVisible:
     text: "SearchBook"
 # From parent: search bookmark by tag
 - tapOn:
     text: "Search"
+- longPressOn:
+    id: "search-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - inputText: "searchtag"
 - assertVisible:
     text: "TagBook"

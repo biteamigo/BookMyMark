@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePreventRemove, useFocusEffect } from '@react-navigation/native';
 import TagsInput from '../Components/TagsInput';
 import { useDatabase } from '../Context/DatabaseContext';
+import { executeTransaction } from '../database/Database';
 import globalStyles from '../CSS/GlobalCss';
 import { getAndClearPendingFolderPickerResult } from '../Utils/folderPickerResult';
 
@@ -24,11 +25,11 @@ import { getAndClearPendingFolderPickerResult } from '../Utils/folderPickerResul
  * 
  * Full-screen form for creating bookmarks
  * @param {navigation} navigation - React Navigation object
- * @param {route} route - Route params: { currentFolderId: null }
+ * @param {route} route - Route params: { currentFolderId: null, sharedUrl?, sharedTitle? } (sharedUrl/sharedTitle when opened from Share)
  */
 const NewBookmarkScreen = ({ navigation, route }) => {
-  const { bookmarkRepository, folderRepository, tagRepository } = useDatabase();
-  const { currentFolderId, editBookmarkId } = route.params || {};
+  const { db, bookmarkRepository, folderRepository, tagRepository } = useDatabase();
+  const { currentFolderId, editBookmarkId, sharedUrl: paramSharedUrl, sharedTitle: paramSharedTitle } = route.params || {};
   
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
@@ -44,6 +45,16 @@ const NewBookmarkScreen = ({ navigation, route }) => {
 
   // Native stack modal doesn't pass params back; FolderPicker writes to bridge and we read on focus.
   // When editing, load bookmark data once; when returning from FolderPicker, apply picked folders.
+  // Apply shared URL/title when opened from Share (e.g. Share from YouTube)
+  useEffect(() => {
+    if (paramSharedUrl && typeof paramSharedUrl === "string") {
+      setUrl(paramSharedUrl);
+    }
+    if (paramSharedTitle != null && paramSharedTitle !== "" && typeof paramSharedTitle === "string") {
+      setName(paramSharedTitle);
+    }
+  }, [paramSharedUrl, paramSharedTitle]);
+
   useFocusEffect(
     React.useCallback(() => {
       const picked = getAndClearPendingFolderPickerResult();
@@ -218,15 +229,17 @@ const NewBookmarkScreen = ({ navigation, route }) => {
 
   const saveUpdatedBookmark = (finalUrl) => {
     const id = editBookmarkId;
-    bookmarkRepository.update(id, { name: name.trim(), url: finalUrl });
+    executeTransaction(db, () => {
+      bookmarkRepository.update(id, { name: name.trim(), url: finalUrl });
 
-    const existingFolderIds = bookmarkRepository.getFolders(id);
-    const toRemove = existingFolderIds.filter((f) => !selectedFolderIds.includes(f));
-    const toAdd = selectedFolderIds.filter((f) => !existingFolderIds.includes(f));
-    toRemove.forEach((folderId) => bookmarkRepository.removeFromFolder(id, folderId));
-    toAdd.forEach((folderId) => bookmarkRepository.addToFolder(id, folderId));
+      const existingFolderIds = bookmarkRepository.getFolders(id);
+      const toRemove = existingFolderIds.filter((f) => !selectedFolderIds.includes(f));
+      const toAdd = selectedFolderIds.filter((f) => !existingFolderIds.includes(f));
+      toRemove.forEach((folderId) => bookmarkRepository.removeFromFolder(id, folderId));
+      toAdd.forEach((folderId) => bookmarkRepository.addToFolder(id, folderId));
 
-    tagRepository.setTagsForBookmark(id, tags);
+      tagRepository.setTagsForBookmark(id, tags);
+    });
 
     savedSuccessfullyRef.current = true;
     navigation.goBack();

@@ -2,12 +2,15 @@ import React from "react";
 import { TouchableOpacity, Text, StyleSheet, View, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-const MenuItem = ({ icon, label, onPress, imageSource, showCheckmark, disabled, textColor }) => {
+const MenuItem = ({ icon, label, onPress, imageSource, showCheckmark, disabled, textColor, testID }) => {
   return (
     <TouchableOpacity 
       style={[styles.container, disabled && styles.disabled]} 
       onPress={onPress}
       disabled={disabled}
+      testID={testID}
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
     >
       <View style={styles.iconContainer}>
         {imageSource ? (

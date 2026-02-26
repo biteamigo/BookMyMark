@@ -5,12 +5,19 @@ appId: com.biteamigo.BookMyMark
 - launchApp
 # Create folder at root with content (child folder or bookmark)
 - tapOn:
-    text: "New Folder"
+    id: "new-folder-button"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    text: "Select"
+- tapOn:
+    text: "Selected (0)"
 - tapOn:
     text: "New Bookmark"
+- tapOn:
+    id: "folder-picker-button"
+- tapOn:
+    id: "folder-picker-item-New-Folder"
+- tapOn:
+    text: "Done"
 - tapOn:
     id: "name-input"
 - inputText: "Inside Cascade"
@@ -19,18 +26,17 @@ appId: com.biteamigo.BookMyMark
 - inputText: "https://cascade.example.com"
 - tapOn:
     text: "Save"
-- back
-# Select the parent folder at root and tap Delete
+# Now at root; select the parent folder and tap Delete
 - tapOn:
     text: "Select"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    id: "folder-item-New-Folder"
 - tapOn:
     text: "Delete"
 - assertVisible:
     text: "Confirm Delete"
+# Cascade warning may be in same element as title or separate; match with regex
 - assertVisible:
-    text: "This will also delete any content in the selected folder(s)."
+    text: ".*delete any content in the selected folder\\(s\\)\\..*"
 - tapOn:
     text: "Cancel"

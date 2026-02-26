@@ -114,6 +114,69 @@ describe('NewBookmarkScreen', () => {
     });
   });
 
+  describe('sharedUrl / sharedTitle (opened from Share)', () => {
+    it('pre-fills URL when sharedUrl is passed in params', async () => {
+      renderWithProviders({
+        params: {
+          sharedUrl: 'https://shared-from-youtube.com/watch?v=xyz',
+        },
+      });
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('https://shared-from-youtube.com/watch?v=xyz')).toBeTruthy();
+      });
+    });
+
+    it('pre-fills name when sharedTitle is passed in params', async () => {
+      renderWithProviders({
+        params: {
+          sharedTitle: 'Cool Video Title',
+        },
+      });
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('Cool Video Title')).toBeTruthy();
+      });
+    });
+
+    it('pre-fills both URL and name when sharedUrl and sharedTitle are passed', async () => {
+      renderWithProviders({
+        params: {
+          sharedUrl: 'https://example.com/article',
+          sharedTitle: 'Article Title',
+        },
+      });
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('https://example.com/article')).toBeTruthy();
+        expect(screen.getByDisplayValue('Article Title')).toBeTruthy();
+      });
+    });
+
+    it('can save a bookmark opened from share with pre-filled URL and title', async () => {
+      renderWithProviders({
+        params: {
+          currentFolderId: folderId,
+          sharedUrl: 'https://saved-from-share.com',
+          sharedTitle: 'Saved From Share',
+        },
+      });
+      await waitFor(() => {
+        expect(screen.getByDisplayValue('https://saved-from-share.com')).toBeTruthy();
+        expect(screen.getByDisplayValue('Saved From Share')).toBeTruthy();
+        expect(screen.getByText('Test Folder')).toBeTruthy();
+      });
+      await waitFor(() => expect(savedHeaderOptions).toBeTruthy());
+      const HeaderRight = savedHeaderOptions.headerRight();
+      const { getByText: getHeaderText } = render(HeaderRight);
+      fireEvent.press(getHeaderText('Save'));
+      await waitFor(() => expect(mockNavigation.goBack).toHaveBeenCalled(), { timeout: 3000 });
+      const db = getDatabase();
+      const { BookmarkRepository } = require('../../database/repositories');
+      const bookmarkRepo = new BookmarkRepository(db);
+      const saved = bookmarkRepo.getAll().find(b => b.name === 'Saved From Share');
+      expect(saved).toBeTruthy();
+      expect(saved.url).toBe('https://saved-from-share.com');
+    });
+  });
+
   it('validates required fields on save', async () => {
     renderWithProviders();
     

@@ -437,7 +437,7 @@ const FolderPickerScreen = ({ navigation, route }) => {
             hasDescendantsSelected && styles.folderItemPartial
           ]}
           onPress={() => toggleFolder(item.id)}
-          testID={`folder-item-${item.id}`}
+          testID={`folder-picker-item-${item.name.replace(/\s+/g, "-")}`}
         >
           <View style={styles.folderInfo}>
             {/* Expand/Collapse Button */}

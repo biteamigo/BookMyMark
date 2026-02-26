@@ -3,12 +3,11 @@ appId: com.biteamigo.BookMyMark
 ---
 - launchApp
 - tapOn:
-    text: "New Folder"
+    id: "new-folder-button"
 - tapOn:
     text: "Select"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    id: "folder-item-New-Folder"
 - tapOn:
     text: "Edit"
 # Inline edit: folder name becomes editable; type new name and submit (blur)

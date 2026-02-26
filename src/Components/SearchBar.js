@@ -7,6 +7,7 @@ const SearchBar = (props) => {
     <View style={styles.backgroundStyle}>
       <Ionicons name="search" style={styles.IconStyle} />
       <TextInput
+        testID="search-input"
         placeholder="Search"
         placeholderTextColor="#999"
         style={styles.InputStyle}

@@ -11,8 +11,6 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     id: "folder-picker-button"
 - tapOn:
-    text: "YouTube"
-- tapOn:
     text: "Music"
 - tapOn:
     text: "Done"

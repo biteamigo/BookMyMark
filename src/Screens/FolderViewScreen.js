@@ -34,8 +34,10 @@ import {
   SEARCH_BAR_HEIGHT,
   BOTTOM_BAR_OFFSET,
 } from "../Utils/layoutUtils";
+import { useShareIntentContext } from "expo-share-intent";
 
 const FolderViewScreen = ({ navigation, route }) => {
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
   const { width: screenWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   // Get folderId from route params (null = root level)
@@ -83,6 +85,25 @@ const FolderViewScreen = ({ navigation, route }) => {
       navigation.setParams({ folderName: null });
     }
   }, [currentFolderId, isRoot, folderRepository, navigation]);
+
+  // When app is opened from share (e.g. Share from YouTube), open New Bookmark with shared URL/title
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasShareIntent || !shareIntent) return;
+      const sharedUrl = shareIntent.webUrl || shareIntent.text || "";
+      if (!sharedUrl.trim()) {
+        resetShareIntent();
+        return;
+      }
+      const sharedTitle = shareIntent.meta?.title || "";
+      navigation.navigate("NewBookmark", {
+        currentFolderId: currentFolderId ?? null,
+        sharedUrl: sharedUrl.trim(),
+        sharedTitle: (sharedTitle && String(sharedTitle).trim()) || undefined,
+      });
+      resetShareIntent();
+    }, [hasShareIntent, shareIntent, resetShareIntent, navigation, currentFolderId])
+  );
 
   // Single source: load full list or search results based on debounced search term
   const refreshItems = useCallback(() => {
@@ -347,6 +368,7 @@ const FolderViewScreen = ({ navigation, route }) => {
             isGridView && { width: gridRowWidth / gridNumColumns },
           ]}>
           <TouchableOpacity
+            testID={`folder-item-${item.name.replace(/\s+/g, "-")}`}
             style={[
               isGridView ? styles.folderTouchableGrid : styles.folderTouchableList,
               isSelected && styles.selectedItem

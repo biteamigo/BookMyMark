@@ -9,6 +9,31 @@ import { getDatabase } from "../../database/Database";
 jest.spyOn(Alert, 'alert');
 jest.spyOn(Linking, 'openURL').mockImplementation(() => Promise.resolve());
 
+const mockResetShareIntent = jest.fn();
+jest.mock("expo-share-intent", () => ({
+  useShareIntentContext: jest.fn(() => ({
+    hasShareIntent: false,
+    shareIntent: null,
+    resetShareIntent: mockResetShareIntent,
+    error: null,
+  })),
+}));
+
+// Run useFocusEffect callback on mount so share-intent and other focus logic runs in tests
+jest.mock("@react-navigation/native", () => {
+  const actual = jest.requireActual("@react-navigation/native");
+  const React = require("react");
+  return {
+    ...actual,
+    useFocusEffect: (callback) => {
+      React.useEffect(() => {
+        const cleanup = callback();
+        return typeof cleanup === "function" ? cleanup : undefined;
+      }, []);
+    },
+  };
+});
+
 jest.mock("../../Utils/layoutUtils", () => {
   const actual = jest.requireActual("../../Utils/layoutUtils");
   return {
@@ -56,10 +81,18 @@ const renderWithProviders = (props = {}) => {
 };
 
 describe("FolderViewScreen", () => {
+  const getShareIntentMock = () => require("expo-share-intent").useShareIntentContext;
+
   beforeEach(() => {
     jest.clearAllMocks();
     Linking.openURL.mockImplementation(() => Promise.resolve());
     mockUseSafeAreaInsets.mockReturnValue({ top: 0, bottom: 0, left: 0, right: 0 });
+    getShareIntentMock().mockImplementation(() => ({
+      hasShareIntent: false,
+      shareIntent: null,
+      resetShareIntent: mockResetShareIntent,
+      error: null,
+    }));
   });
 
   describe("Root level (folderId: null)", () => {
@@ -641,6 +674,107 @@ describe("FolderViewScreen", () => {
       const { UNSAFE_root } = renderWithProviders({ route: { params: { folderId: "some-id" } } });
       const flatListInst = UNSAFE_root.findAllByType(FlatList)[0];
       expect(flatListInst.props.numColumns).toBe(1);
+    });
+  });
+
+  describe("Share intent (opened from Share sheet)", () => {
+    it("does not navigate when there is no share intent", () => {
+      getShareIntentMock().mockReturnValue({
+        hasShareIntent: false,
+        shareIntent: null,
+        resetShareIntent: mockResetShareIntent,
+        error: null,
+      });
+      renderWithProviders();
+      expect(mockNavigate).not.toHaveBeenCalledWith("NewBookmark", expect.anything());
+      expect(mockResetShareIntent).not.toHaveBeenCalled();
+    });
+
+    it("navigates to NewBookmark with sharedUrl and sharedTitle when share intent has webUrl and meta.title", async () => {
+      getShareIntentMock().mockImplementation(() => ({
+        hasShareIntent: true,
+        shareIntent: {
+          webUrl: "https://youtube.com/watch?v=abc",
+          text: "https://youtube.com/watch?v=abc",
+          meta: { title: "Cool Video" },
+          files: [],
+        },
+        resetShareIntent: mockResetShareIntent,
+        error: null,
+      }));
+      renderWithProviders();
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith("NewBookmark", {
+          currentFolderId: null,
+          sharedUrl: "https://youtube.com/watch?v=abc",
+          sharedTitle: "Cool Video",
+        });
+      });
+      expect(mockResetShareIntent).toHaveBeenCalled();
+    });
+
+    it("navigates to NewBookmark with sharedUrl from text when webUrl is missing", async () => {
+      getShareIntentMock().mockImplementation(() => ({
+        hasShareIntent: true,
+        shareIntent: {
+          webUrl: null,
+          text: "https://example.com/page",
+          meta: {},
+          files: [],
+        },
+        resetShareIntent: mockResetShareIntent,
+        error: null,
+      }));
+      renderWithProviders();
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith("NewBookmark", {
+          currentFolderId: null,
+          sharedUrl: "https://example.com/page",
+          sharedTitle: undefined,
+        });
+      });
+      expect(mockResetShareIntent).toHaveBeenCalled();
+    });
+
+    it("does not navigate and resets when share intent has no URL or text", async () => {
+      getShareIntentMock().mockImplementation(() => ({
+        hasShareIntent: true,
+        shareIntent: {
+          webUrl: null,
+          text: "",
+          meta: {},
+          files: [],
+        },
+        resetShareIntent: mockResetShareIntent,
+        error: null,
+      }));
+      renderWithProviders();
+      await waitFor(() => {
+        expect(mockResetShareIntent).toHaveBeenCalled();
+      });
+      expect(mockNavigate).not.toHaveBeenCalledWith("NewBookmark", expect.anything());
+    });
+
+    it("passes currentFolderId when in subfolder and share intent is present", async () => {
+      getShareIntentMock().mockImplementation(() => ({
+        hasShareIntent: true,
+        shareIntent: {
+          webUrl: "https://shared.com",
+          text: "https://shared.com",
+          meta: { title: "Shared Page" },
+          files: [],
+        },
+        resetShareIntent: mockResetShareIntent,
+        error: null,
+      }));
+      renderWithProviders({ route: { params: { folderId: "folder-123" } } });
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith("NewBookmark", {
+          currentFolderId: "folder-123",
+          sharedUrl: "https://shared.com",
+          sharedTitle: "Shared Page",
+        });
+      });
     });
   });
 });

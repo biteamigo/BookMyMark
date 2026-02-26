@@ -4,6 +4,8 @@ appId: com.biteamigo.BookMyMark
 - launchApp
 - tapOn:
     text: "Select"
+- assertVisible:
+    text: "Selected (0)"
 - tapOn:
     text: "YouTube"
 - assertVisible:
@@ -14,12 +16,37 @@ appId: com.biteamigo.BookMyMark
     text: "Select"
 - assertVisible:
     text: "New Folder"
-# Via dropdown
+# Via dropdown: assert "Selected (1)" on bottom bar, then on ellipsis menu
 - tapOn:
+    text: "Select"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "Selected (1)"
+- tapOn:
+    id: "header-menu"
+- assertVisible:
+    id: "dropdown-menu-selected"
+    text: "Selected \\(1\\)"
+- tapOn:
+    id: "dropdown-menu-selected"
+- assertVisible:
     text: "Select"
 - tapOn:
     id: "header-menu"
-- tapOn:
-    text: "Selected (1)"
 - assertVisible:
+    id: "dropdown-menu-selected"
     text: "Select"
+- tapOn:
+    id: "dropdown-menu-selected"
+- assertVisible:
+    text: "Selected (0)"
+- tapOn:
+    text: "YouTube"
+- assertVisible:
+    text: "Selected (1)"
+- tapOn:
+    id: "header-menu"
+- assertVisible:
+    id: "dropdown-menu-selected"
+    text: "Selected \\(1\\)"

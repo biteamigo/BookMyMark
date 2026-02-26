@@ -97,8 +97,10 @@ CREATE TRIGGER IF NOT EXISTS bookmarks_ai AFTER INSERT ON bookmarks BEGIN
   INSERT INTO bookmarks_fts(rowid, id, name, url) VALUES (new.rowid, new.id, new.name, new.url);
 END;
 
+-- FTS5 external content: use 'delete' + INSERT (not UPDATE) to avoid corruption/malformed errors
 CREATE TRIGGER IF NOT EXISTS bookmarks_au AFTER UPDATE ON bookmarks BEGIN
-  UPDATE bookmarks_fts SET name = new.name, url = new.url WHERE id = new.id;
+  INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, name, url) VALUES ('delete', old.rowid, old.id, old.name, old.url);
+  INSERT INTO bookmarks_fts(rowid, id, name, url) VALUES (new.rowid, new.id, new.name, new.url);
 END;
 
 -- FTS5 external content: must use 'delete' command (not DELETE) to avoid "missing row from content table"
@@ -127,6 +129,15 @@ CREATE TRIGGER folders_ad AFTER DELETE ON folders BEGIN
 END;
 CREATE TRIGGER bookmarks_ad AFTER DELETE ON bookmarks BEGIN
   INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, name, url) VALUES ('delete', old.rowid, old.id, old.name, old.url);
+END;
+`;
+
+/** Recreate FTS5 UPDATE trigger for bookmarks: use 'delete' + INSERT instead of UPDATE (fixes "database disk image is malformed") */
+export const FIX_FTS_BOOKMARKS_UPDATE_TRIGGER_SQL = `
+DROP TRIGGER IF EXISTS bookmarks_au;
+CREATE TRIGGER bookmarks_au AFTER UPDATE ON bookmarks BEGIN
+  INSERT INTO bookmarks_fts(bookmarks_fts, rowid, id, name, url) VALUES ('delete', old.rowid, old.id, old.name, old.url);
+  INSERT INTO bookmarks_fts(rowid, id, name, url) VALUES (new.rowid, new.id, new.name, new.url);
 END;
 `;
 

@@ -50,6 +50,7 @@ const BottomActionBar = ({ currentFolderId, onSelect, onNewBookmark, onDelete, o
               style={[styles.actionButton, isEditDisabled && styles.disabledButton]} 
               onPress={handleEdit}
               disabled={isEditDisabled}
+              accessibilityState={{ disabled: isEditDisabled }}
             >
               <Ionicons 
                 name="pencil" 
@@ -65,6 +66,7 @@ const BottomActionBar = ({ currentFolderId, onSelect, onNewBookmark, onDelete, o
               style={[styles.actionButton, isDeleteDisabled && styles.disabledButton]} 
               onPress={handleDelete}
               disabled={isDeleteDisabled}
+              accessibilityState={{ disabled: isDeleteDisabled }}
             >
               <Ionicons 
                 name="trash-outline" 
@@ -81,6 +83,7 @@ const BottomActionBar = ({ currentFolderId, onSelect, onNewBookmark, onDelete, o
             <TouchableOpacity 
               style={styles.actionButton} 
               onPress={handleNewFolder}
+              testID="new-folder-button"
             >
               <MaterialCommunityIcons name="folder-plus-outline" size={24} color="#000" />
               <Text style={styles.actionText}>New Folder</Text>

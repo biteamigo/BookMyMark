@@ -118,7 +118,7 @@ describe('FolderPickerScreen', () => {
     const folders = folderRepo.getAll();
     const firstFolder = folders[0];
 
-    const folderItem = screen.getByTestId(`folder-item-${firstFolder.id}`);
+    const folderItem = screen.getByTestId(`folder-picker-item-${firstFolder.name.replace(/\s+/g, "-")}`);
     
     await act(async () => {
       fireEvent.press(folderItem);
@@ -150,7 +150,7 @@ describe('FolderPickerScreen', () => {
 
     // Select first folder
     await act(async () => {
-      fireEvent.press(screen.getByTestId(`folder-item-${folders[0].id}`));
+      fireEvent.press(screen.getByTestId(`folder-picker-item-${folders[0].name.replace(/\s+/g, "-")}`));
       await new Promise(resolve => setTimeout(resolve, 400));
     });
     
@@ -160,7 +160,7 @@ describe('FolderPickerScreen', () => {
 
     // Select second folder
     await act(async () => {
-      fireEvent.press(screen.getByTestId(`folder-item-${folders[1].id}`));
+      fireEvent.press(screen.getByTestId(`folder-picker-item-${folders[1].name.replace(/\s+/g, "-")}`));
       await new Promise(resolve => setTimeout(resolve, 100));
     });
     
@@ -174,12 +174,12 @@ describe('FolderPickerScreen', () => {
     const { FolderRepository } = require('../../database/repositories');
     const folderRepo = new FolderRepository(db);
     const folders = folderRepo.getAll();
-    const firstFolderId = folders[0]?.id;
+    const firstFolder = folders[0];
 
     renderWithProviders(
       <FolderPickerScreen 
         navigation={mockNavigation} 
-        route={{ params: { selectedFolderIds: [firstFolderId] } }}
+        route={{ params: { selectedFolderIds: [firstFolder.id] } }}
       />
     );
     
@@ -193,7 +193,7 @@ describe('FolderPickerScreen', () => {
     });
 
     // Tap to deselect
-    const folderItem = screen.getByTestId(`folder-item-${firstFolderId}`);
+    const folderItem = screen.getByTestId(`folder-picker-item-${firstFolder.name.replace(/\s+/g, "-")}`);
     await act(async () => {
       fireEvent.press(folderItem);
       await new Promise(resolve => setTimeout(resolve, 300));
@@ -563,7 +563,7 @@ describe('FolderPickerScreen', () => {
       expect(screen.queryByText('ExpandChild')).toBeNull();
 
       // Find the parent folder item
-      const parentItem = screen.getByTestId(`folder-item-${parent.id}`);
+      const parentItem = screen.getByTestId(`folder-picker-item-${parent.name.replace(/\s+/g, "-")}`);
       
       // Tap to expand (this taps the folder item itself, not the chevron)
       await act(async () => {

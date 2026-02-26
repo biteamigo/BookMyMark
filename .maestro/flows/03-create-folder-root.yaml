@@ -6,9 +6,12 @@ appId: com.biteamigo.BookMyMark
     text: "New Folder"
 - tapOn:
     text: "New Folder"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Selected (0)"
 - assertVisible:
     text: "New Folder"
-# New folder appears with generated name like "New Folder" or "New Folder 1"; list refreshes
 - assertVisible:
     text: "YouTube"
 - assertVisible:

@@ -53,6 +53,7 @@ const DropdownMenu = ({
           <TouchableWithoutFeedback>
             <View style={styles.menuContainer}>
               <MenuItem
+                testID="dropdown-menu-selected"
                 icon={<Ionicons name={selectIcon} size={24} color={selectColor} />}
                 label={selectLabel}
                 onPress={() => {

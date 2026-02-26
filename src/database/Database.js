@@ -2,7 +2,7 @@
  * Database initialization and management
  */
 import * as SQLite from "expo-sqlite";
-import { CREATE_TABLES_SQL, DROP_TABLES_SQL, FIX_FTS_DELETE_TRIGGERS_SQL, DATABASE_NAME } from "./schema";
+import { CREATE_TABLES_SQL, DROP_TABLES_SQL, FIX_FTS_DELETE_TRIGGERS_SQL, FIX_FTS_BOOKMARKS_UPDATE_TRIGGER_SQL, DATABASE_NAME } from "./schema";
 import { seedDatabase } from "./seed";
 
 let dbInstance = null;
@@ -37,6 +37,12 @@ const initializeDatabase = (db) => {
     db.execSync(FIX_FTS_DELETE_TRIGGERS_SQL);
   } catch (e) {
     console.warn("FTS trigger fix skipped (tables may not exist yet):", e?.message);
+  }
+  // Fix FTS5 bookmarks UPDATE trigger (use 'delete' + INSERT to avoid malformed DB on URL/name edit)
+  try {
+    db.execSync(FIX_FTS_BOOKMARKS_UPDATE_TRIGGER_SQL);
+  } catch (e) {
+    console.warn("FTS bookmarks_au trigger fix skipped:", e?.message);
   }
 
   // Seed initial data if needed

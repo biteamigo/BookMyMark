@@ -21,6 +21,7 @@ import EllipsisMenuButton from "./src/Components/EllipsisMenuButton.js";
 import DebugButton from "./src/Components/DebugButton.js";
 import { DatabaseProvider } from "./src/Context/DatabaseContext.js";
 import { FolderProvider, useFolders } from "./src/Context/FolderContext.js";
+import { ShareIntentProvider } from "expo-share-intent";
 
 // Keep the splash screen visible while fonts load
 SplashScreen.preventAutoHideAsync();
@@ -180,13 +181,15 @@ const App = () => {
 
   return (
     <SafeAreaProvider>
-      <DatabaseProvider>
-        <FolderProvider>
-          <NavigationContainer>
-            <AppNavigator />
-          </NavigationContainer>
-        </FolderProvider>
-      </DatabaseProvider>
+      <ShareIntentProvider>
+        <DatabaseProvider>
+          <FolderProvider>
+            <NavigationContainer>
+              <AppNavigator />
+            </NavigationContainer>
+          </FolderProvider>
+        </DatabaseProvider>
+      </ShareIntentProvider>
     </SafeAreaProvider>
   );
 };

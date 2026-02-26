@@ -19,6 +19,10 @@ appId: com.biteamigo.BookMyMark
 - assertVisible:
     text: "Bookmark name is required"
 - back
+- assertVisible:
+    text: "Discard Changes?"
+- tapOn:
+    text: "Discard"
 # 2. Cannot save without URL (name + folder only)
 - tapOn:
     text: "New Bookmark"
@@ -36,6 +40,10 @@ appId: com.biteamigo.BookMyMark
 - assertVisible:
     text: "URL is required"
 - back
+- assertVisible:
+    text: "Discard Changes?"
+- tapOn:
+    text: "Discard"
 # 3. Cannot save without folder (name + URL only, from root)
 - tapOn:
     text: "New Bookmark"
@@ -50,6 +58,10 @@ appId: com.biteamigo.BookMyMark
 - assertVisible:
     text: "Please select at least one folder"
 - back
+- assertVisible:
+    text: "Discard Changes?"
+- tapOn:
+    text: "Discard"
 # 4. Can create without tag
 - tapOn:
     text: "New Bookmark"
@@ -67,8 +79,11 @@ appId: com.biteamigo.BookMyMark
     text: "Done"
 - tapOn:
     text: "Save"
+- tapOn:
+    text: "Recipes"
 - assertVisible:
     text: "No Tag Bookmark"
+- back
 # 5. Can create with multiple tags
 - tapOn:
     text: "New Bookmark"
@@ -88,9 +103,15 @@ appId: com.biteamigo.BookMyMark
     text: "Add tags..."
 - inputText: "tag1"
 - tapOn:
-    text: "tag1"
+    id: "add-tag-button"
+- tapOn:
+     text: "Add tags..."
 - inputText: "tag2"
 - tapOn:
+    id: "add-tag-button"
+- assertVisible:
+    text: "tag1"
+- assertVisible:
     text: "tag2"
 - tapOn:
     text: "Save"

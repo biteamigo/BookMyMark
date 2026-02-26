@@ -18,7 +18,7 @@ appId: com.biteamigo.BookMyMark
     text: "Add tags..."
 - inputText: "onlymusic"
 - tapOn:
-    text: "onlymusic"
+    id: "add-tag-button"
 - tapOn:
     text: "Save"
 - back

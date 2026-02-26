@@ -11,8 +11,19 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
+    "assetBundlePatterns": ["**/*"],
+    "scheme": "bookmymark",
+    "plugins": [
+      [
+        "expo-share-intent",
+        {
+          "androidIntentFilters": ["text/*"],
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1
+          }
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true,
@@ -31,7 +42,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [],
     "extra": {
       "eas": {
         "projectId": "3843cfce-a5f1-4a82-acb1-7a582c6ae60d"

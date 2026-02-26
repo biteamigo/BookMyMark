@@ -21,40 +21,75 @@ appId: com.biteamigo.BookMyMark
     text: "Edit Me Bookmark"
 - tapOn:
     text: "Edit"
-# Edit name
+# Edit name (clear then type so we replace, not append)
 - tapOn:
     id: "name-input"
+- longPressOn:
+    id: "name-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - inputText: "Edited Name Bookmark"
 - tapOn:
     text: "Save"
 - assertVisible:
     text: "Edited Name Bookmark"
 - tapOn:
+    text: "Select"
+- tapOn:
     text: "Edited Name Bookmark"
 - tapOn:
     text: "Edit"
-# Edit URL
+# Edit URL (clear then type so we replace, not append)
 - tapOn:
     id: "url-input"
+- longPressOn:
+    id: "url-input"
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+- eraseText
 - inputText: "https://edited-url.example.com"
 - tapOn:
     text: "Save"
 - tapOn:
-    text: "Edit"
-# Add tags
-- tapOn:
-    text: "Add tags..."
-- inputText: "e2e-tag"
-- tapOn:
-    text: "e2e-tag"
-- tapOn:
-    text: "Save"
+    text: "Select"
 - tapOn:
     text: "Edited Name Bookmark"
 - tapOn:
     text: "Edit"
-# Delete tag (remove the chip)
+- assertVisible:
+    text: "https://edited-url.example.com"
+# Add tags (type tag then tap + to add it before Save)
 - tapOn:
-    text: "e2e-tag"
+    text: "Add tags..."
+- inputText: "e2e-tag"
+- tapOn:
+    id: "add-tag-button"
 - tapOn:
     text: "Save"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Edited Name Bookmark"
+- tapOn:
+    text: "Edit"
+# Delete tag (tap the x on the chip to remove it)
+- tapOn:
+    id: "remove-tag-e2e-tag"
+- tapOn:
+    text: "Save"
+# Confirm tag is deleted: edit again and assert e2e-tag is not visible
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Edited Name Bookmark"
+- tapOn:
+    text: "Edit"
+- assertNotVisible:
+    text: "e2e-tag"

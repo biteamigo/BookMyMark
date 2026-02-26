@@ -4,12 +4,13 @@ appId: com.biteamigo.BookMyMark
 - launchApp
 # Ensure we have a folder to delete at root: create one
 - tapOn:
-    text: "New Folder"
+    id: "new-folder-button"
 - tapOn:
     text: "Select"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    text: "Selected (0)"
+- tapOn:
+    id: "folder-item-New-Folder"
 - tapOn:
     text: "Delete"
 - assertVisible:
@@ -18,19 +19,32 @@ appId: com.biteamigo.BookMyMark
     text: "Delete"
 - assertVisible:
     text: "deleted"
-# Delete 2 folders at root: create two then delete both
+# Delete 2 folders at root: create two then delete both (rename first so we have unique testIDs)
 - tapOn:
-    text: "New Folder"
-- tapOn:
-    text: "New Folder"
+    id: "new-folder-button"
 - tapOn:
     text: "Select"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    text: "Selected (0)"
 - tapOn:
-    text: "New Folder"
-    index: 1
+    id: "folder-item-New-Folder"
+- tapOn:
+    text: "Edit"
+- tapOn:
+    id: "folder-name-edit-input"
+- inputText: "DeleteFolder1"
+- tapOn:
+    text: "Select"
+- tapOn:
+    id: "new-folder-button"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Selected (0)"
+- tapOn:
+    id: "folder-item-DeleteFolder1"
+- tapOn:
+    id: "folder-item-New-Folder"
 - tapOn:
     text: "Delete"
 - tapOn:
@@ -92,7 +106,11 @@ appId: com.biteamigo.BookMyMark
     text: "Delete"
 # Delete 1 folder + 1 bookmark in subfolder
 - tapOn:
-    text: "New Folder"
+    id: "new-folder-button"
+- tapOn:
+    text: "Select"
+- tapOn:
+    text: "Selected (0)"
 - tapOn:
     text: "New Bookmark"
 - tapOn:
@@ -106,8 +124,7 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     text: "Select"
 - tapOn:
-    text: "New Folder"
-    index: 0
+    id: "folder-item-New-Folder"
 - tapOn:
     text: "Del B3"
 - tapOn:

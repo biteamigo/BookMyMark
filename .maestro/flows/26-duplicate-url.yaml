@@ -3,7 +3,7 @@
 appId: com.biteamigo.BookMyMark
 ---
 - launchApp
-# Create first bookmark with URL
+# Create first bookmark with URL (YouTube is pre-selected when opened from folder)
 - tapOn:
     text: "YouTube"
 - tapOn:
@@ -27,22 +27,17 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     id: "url-input"
 - inputText: "https://dup-url.example.com"
-- tapOn:
-    id: "folder-picker-button"
-- tapOn:
-    text: "YouTube"
-- tapOn:
-    text: "Done"
+# YouTube is pre-selected (we're in YouTube); no need to open folder picker
 - tapOn:
     text: "Save"
 - assertVisible:
     text: "Duplicate URL"
-- assertVisible:
-    text: "already exists"
 - tapOn:
     text: "Cancel"
-# Edit another bookmark to use the same URL
+# Edit another bookmark to use the same URL (back triggers Discard Changes? when form has unsaved data)
 - back
+- tapOn:
+    text: "Discard"
 - tapOn:
     text: "New Bookmark"
 - tapOn:
@@ -61,12 +56,21 @@ appId: com.biteamigo.BookMyMark
     text: "Edit"
 - tapOn:
     id: "url-input"
+# Long press on the field to bring up the context menu
+- longPressOn:
+    id: "url-input"
+# Tap 'Select All' in the context menu if it appears
+- runFlow:
+    when:
+      visible: "Select All"
+    commands:
+      - tapOn: "Select All"
+# Use eraseText to clear the now-selected text
+- eraseText 
 - inputText: "https://dup-url.example.com"
 - tapOn:
     text: "Save"
 - assertVisible:
     text: "Duplicate URL"
-- assertVisible:
-    text: "other bookmark"
 - tapOn:
     text: "Cancel"

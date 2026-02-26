@@ -13,7 +13,7 @@ appId: com.biteamigo.BookMyMark
 - tapOn:
     id: "header-menu"
 - tapOn:
-    text: "Select"
+    id: "dropdown-menu-selected"
 - assertVisible:
     text: "Selected (0)"
 - tapOn:
@@ -31,8 +31,8 @@ appId: com.biteamigo.BookMyMark
     id: "header-menu"
 - tapOn:
     text: "Selected (0)"
-- tapOn:
-    text: "Selected (0)"
+- assertVisible:
+    text: "Select"
 # Subfolder, grid then list
 - tapOn:
     id: "header-menu"

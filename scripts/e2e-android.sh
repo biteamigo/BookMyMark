@@ -70,16 +70,21 @@ METRO_PID=$!
 sleep 15
 echo "      Metro should be ready."
 
-# 4. Run Maestro tests (terminal output + HTML report)
+# 4. Run Maestro tests (step-by-step in terminal + HTML report)
+# Run Maestro under script(1) with a pseudo-TTY; send its output to /dev/tty so it appears
+# on your terminal even when this script is run via npm run e2e:android (npm may connect
+# stdout to a pipe, which hides the step-by-step output).
 REPORT_DIR=".maestro/output"
 REPORT_FILE="$REPORT_DIR/report.html"
 mkdir -p "$REPORT_DIR"
 echo "[4/4] Running Maestro tests (report → $REPORT_FILE)..."
+MAESTRO_EXIT=0
 if [[ ${#FLOWS[@]} -gt 0 ]]; then
-  maestro test --format html --output "$REPORT_FILE" "${FLOWS[@]}"
+  script -q /dev/null maestro test --format html --output "$REPORT_FILE" "${FLOWS[@]}" > /dev/tty 2>&1 || MAESTRO_EXIT=$?
 else
-  maestro test --format html --output "$REPORT_FILE" .maestro/
+  script -q /dev/null maestro test --format html --output "$REPORT_FILE" .maestro/ > /dev/tty 2>&1 || MAESTRO_EXIT=$?
 fi
 
 echo "=== E2E run finished. ==="
 echo "HTML report: $REPORT_FILE"
+exit $MAESTRO_EXIT

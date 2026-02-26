@@ -297,10 +297,10 @@ npm run e2e:android
 
 Or run the script directly:
 
-- **Default (all flows, Pixel_9_Pro_XL_2):** `./scripts/e2e-android.sh`
-- **Another AVD:** `./scripts/e2e-android.sh --avd MyAVDName`
-- **Subset of flows:** `./scripts/e2e-android.sh .maestro/flows/01-root-screen.yaml`
-- **Other AVD + subset:** `./scripts/e2e-android.sh --avd MyAVD .maestro/flows/01-root-screen.yaml`
+- **All flows (default AVD):** `./scripts/e2e-android.sh` — runs every flow under `.maestro/` using **Pixel_9_Pro_XL_2**.
+- **Single flow (default AVD):** `./scripts/e2e-android.sh .maestro/flows/<flow>.yaml` — e.g. `./scripts/e2e-android.sh .maestro/flows/01-root-screen.yaml` or `./scripts/e2e-android.sh .maestro/flows/26-duplicate-url.yaml`.
+- **Single flow with a specific AVD:** `./scripts/e2e-android.sh --avd MyAVDName .maestro/flows/<flow>.yaml` — e.g. `./scripts/e2e-android.sh --avd Pixel_9_Pro_XL_2 .maestro/flows/24-search.yaml`.
+- **Multiple flows:** `./scripts/e2e-android.sh .maestro/flows/flow1.yaml .maestro/flows/flow2.yaml` — list as many flow files as you want; they run in order.
 
 Ensure the AVD exists (e.g. in Android Studio → Device Manager) and that no other instance of that AVD is already running. The script stops Metro and the emulator automatically when the run finishes.
 
