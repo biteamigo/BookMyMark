@@ -481,6 +481,3 @@ Make sure your Expo Go app is updated to support SDK 54.
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Run tests with coverage report |
 
-## License
-
-This project is private and not licensed for public use.
